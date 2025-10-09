@@ -25,35 +25,78 @@ PINNs solve PDEs by:
 
 ## 📁 Files in this Directory
 
-- `tutorial.ipynb` - Interactive Jupyter notebook tutorial
+### Core Files
 - `train.py` - Complete training script for various PDE problems
 - `models.py` - Neural network architectures for PINNs
 - `pde_definitions.py` - Common PDE definitions and residual functions
 
+### Tutorial Notebooks (`tutorial/`)
+- `tutorial_chinese.ipynb` - 完整的中文PINNs教程 (Complete Chinese PINNs Tutorial)
+- `tutorial_eng.ipynb` - English PINNs Tutorial
+- `possion_1d.ipynb` - 1D Poisson equation tutorial
+- `heat_2d.ipynb` - 2D heat equation examples
+- `ns_basic.ipynb` - Basic Navier-Stokes equations
+- `ns_advanced.ipynb` - Advanced Navier-Stokes examples
+- `system_pde.ipynb` - System of PDEs tutorial
+- `vlasov_poisson.ipynb` - Vlasov-Poisson system
+
+### Examples (`examples/`)
+- `possion_dirichlet_1d.py` - 1D Poisson equation with Dirichlet BC using DeepXDE
+
+### Additional Directories
+- `vp_system/` - Vlasov-Poisson system implementations
+
 ## 🚀 Quick Start
 
-### Running the Tutorial
+### Running the Tutorials
 ```bash
-jupyter notebook tutorial.ipynb
+# Chinese tutorial (recommended for beginners)
+jupyter notebook tutorial/tutorial_chinese.ipynb
+
+# English tutorial
+jupyter notebook tutorial/tutorial_eng.ipynb
+
+# Specific PDE examples
+jupyter notebook tutorial/possion_1d.ipynb
+jupyter notebook tutorial/heat_2d.ipynb
 ```
 
-### Training a Model
+### Running DeepXDE Examples
+```bash
+cd examples/
+python possion_dirichlet_1d.py
+```
+
+### Training Custom Models
 ```bash
 python train.py --problem poisson --epochs 10000 --lr 0.001
 ```
 
 ### Available Problems
 - `poisson` - 1D/2D Poisson equation
+- `heat` - Heat equation (1D/2D)
 - `burgers` - Burgers' equation
-- `heat` - Heat equation
-- `wave` - Wave equation
+- `navier_stokes` - Navier-Stokes equations
+- `vlasov_poisson` - Vlasov-Poisson system
 
 ## 📊 Example Results
 
-The tutorial demonstrates solving:
+The tutorials demonstrate solving:
+
+### Basic PDEs
 1. **1D Poisson Equation**: ∂²u/∂x² = f(x)
-2. **2D Poisson Equation**: ∇²u = f(x,y) 
-3. **Burgers' Equation**: ∂u/∂t + u∂u/∂x = ν∂²u/∂x²
+2. **2D Heat Equation**: ∂u/∂t = α∇²u
+3. **1D Burgers' Equation**: ∂u/∂t + u∂u/∂x = ν∂²u/∂x²
+
+### Advanced Applications
+4. **2D Navier-Stokes**: Fluid flow simulations
+5. **Vlasov-Poisson System**: Plasma physics applications
+6. **System of PDEs**: Coupled equation systems
+
+### Implementation Approaches
+- **Pure PyTorch**: From-scratch implementations with manual gradient computation
+- **DeepXDE**: Using the DeepXDE library for rapid prototyping
+- **Comparative Analysis**: Performance comparison between different approaches
 
 ## 🔧 Implementation Details
 
@@ -97,3 +140,25 @@ The neural network u_θ(x) with parameters θ learns to satisfy both the PDE and
 1. Raissi, M., Perdikaris, P., & Karniadakis, G. E. (2019). Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations. Journal of Computational Physics, 378, 686-707.
 
 2. Karniadakis, G. E., Kevrekidis, I. G., Lu, L., Perdikaris, P., Wang, S., & Yang, L. (2021). Physics-informed machine learning. Nature Reviews Physics, 3(6), 422-440.
+
+3. Lu, L., Meng, X., Mao, Z., & Karniadakis, G. E. (2021). DeepXDE: A deep learning library for solving differential equations. SIAM review, 63(1), 208-228.
+
+## 🌟 Features
+
+### Comprehensive Tutorials
+- **Bilingual Support**: Both Chinese and English tutorials available
+- **Progressive Learning**: From basic concepts to advanced applications
+- **Interactive Examples**: Jupyter notebooks with step-by-step explanations
+- **Visualization Tools**: Comprehensive plotting and analysis functions
+
+### Multiple Implementation Styles
+- **Educational**: Pure PyTorch implementations for learning
+- **Production**: DeepXDE-based examples for practical applications
+- **Comparative**: Side-by-side performance analysis
+
+### Advanced Topics Covered
+- Multi-scale neural networks
+- Adaptive weighting strategies
+- Uncertainty quantification
+- Inverse problem solving
+- Parameter identification
