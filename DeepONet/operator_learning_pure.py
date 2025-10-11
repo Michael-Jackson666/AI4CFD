@@ -2,7 +2,7 @@
 算子学习完整训练代码 - 纯PyTorch实现
 Deep Operator Network (DeepONet) for Integral Operator Learning
 
-这是一个完整的DeepONet实现，用于学习积分算子映射。
+这是一个完整的DeepONet实现, 用于学习积分算子映射。
 运行此文件即可完成模型训练、评估和可视化。
 
 作者: AI4CFD团队
@@ -14,7 +14,6 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm import tqdm
 import warnings
 import os
@@ -32,8 +31,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"🖥️ 使用设备: {device}")
 print(f"🔥 PyTorch版本: {torch.__version__}")
 
-# 设置matplotlib中文显示
-plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei']
+# 设置matplotlib英文显示
+plt.rcParams['font.family'] = 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 plt.style.use('seaborn-v0_8')
 
@@ -382,10 +381,10 @@ class DeepONetTrainer:
         ax.semilogy(epochs, self.history['train_loss'], 'b-', linewidth=2, label='训练损失')
         ax.semilogy(epochs, self.history['val_loss'], 'r-', linewidth=2, label='验证损失')
         
-        ax.set_xlabel('训练轮次')
-        ax.set_ylabel('损失值 (对数尺度)')
-        ax.set_title('DeepONet训练历史', fontsize=14, fontweight='bold')
-        ax.legend()
+        ax.set_xlabel('Training Epochs')
+        ax.set_ylabel('Loss Value (Log Scale)')
+        ax.set_title('DeepONet Training History', fontsize=14, fontweight='bold')
+        ax.legend(['Training Loss', 'Validation Loss'])
         ax.grid(True, alpha=0.3)
         
         if save_plot:
@@ -472,7 +471,7 @@ class ModelEvaluator:
             ax1 = plt.subplot(3, n_samples, i + 1)
             ax1.plot(dataset.sensor_locations, sensor_np[i], 'ro-', 
                     markersize=4, linewidth=2, alpha=0.8)
-            ax1.set_title(f'输入函数 u_{i+1}(x)', fontweight='bold')
+            ax1.set_title(f'Input Function u_{i+1}(x)', fontweight='bold')
             ax1.set_xlabel('x')
             ax1.set_ylabel('u(x)')
             ax1.grid(True, alpha=0.3)
@@ -483,9 +482,9 @@ class ModelEvaluator:
             y_true = target_np[i, :, 0]
             y_pred = pred_np[i, :, 0]
             
-            ax2.plot(x_query, y_true, 'b-', linewidth=3, label='真实值', alpha=0.8)
-            ax2.plot(x_query, y_pred, 'r--', linewidth=2, label='预测值')
-            ax2.set_title(f'G[u_{i+1}] - 预测 vs 真实', fontweight='bold')
+            ax2.plot(x_query, y_true, 'b-', linewidth=3, label='True Value', alpha=0.8)
+            ax2.plot(x_query, y_pred, 'r--', linewidth=2, label='Predicted Value')
+            ax2.set_title(f'G[u_{i+1}] - Prediction vs True', fontweight='bold')
             ax2.set_xlabel('x')
             ax2.set_ylabel('G[u](x)')
             ax2.legend()
@@ -496,15 +495,15 @@ class ModelEvaluator:
             error = np.abs(y_pred - y_true)
             ax3.plot(x_query, error, 'g-', linewidth=2)
             ax3.fill_between(x_query, 0, error, alpha=0.3, color='green')
-            ax3.set_title(f'绝对误差 |预测 - 真实|', fontweight='bold')
+            ax3.set_title(f'Absolute Error |Pred - True|', fontweight='bold')
             ax3.set_xlabel('x')
-            ax3.set_ylabel('|误差|')
+            ax3.set_ylabel('|Error|')
             ax3.grid(True, alpha=0.3)
             
             # 添加误差统计
             mean_error = np.mean(error)
             max_error = np.max(error)
-            ax3.text(0.05, 0.95, f'平均: {mean_error:.4f}\n最大: {max_error:.4f}', 
+            ax3.text(0.05, 0.95, f'Mean: {mean_error:.4f}\nMax: {max_error:.4f}', 
                     transform=ax3.transAxes, verticalalignment='top',
                     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
         
@@ -518,7 +517,7 @@ class ModelEvaluator:
     def final_demonstration(self, dataset, save_plot=True):
         """最终演示：测试全新的高斯函数"""
         
-        print("🎭 最终演示：DeepONet处理全新输入函数")
+        print("🎭 Final Demo: DeepONet Processing Novel Input Functions")
         print("="*50)
         
         # 创建测试函数
@@ -565,17 +564,17 @@ class ModelEvaluator:
             
             # 绘制输入函数
             axes[0, i].plot(x, test_func, 'bo-', linewidth=2, markersize=3)
-            axes[0, i].set_title(f'测试函数 {i+1} (高斯分布)', fontweight='bold')
+            axes[0, i].set_title(f'Test Function {i+1} (Gaussian)', fontweight='bold')
             axes[0, i].set_xlabel('x')
             axes[0, i].set_ylabel('u(x)')
             axes[0, i].grid(True, alpha=0.3)
             
             # 绘制积分预测
             axes[1, i].plot(query_points.squeeze(), prediction.cpu().squeeze(), 
-                           'r-', linewidth=3, label='DeepONet预测')
+                           'r-', linewidth=3, label='DeepONet Prediction')
             axes[1, i].plot(query_points.squeeze(), numerical_integral, 
-                           'b--', linewidth=2, alpha=0.7, label='数值积分')
-            axes[1, i].set_title(f'积分预测 vs 数值解', fontweight='bold')
+                           'b--', linewidth=2, alpha=0.7, label='Numerical Integration')
+            axes[1, i].set_title(f'Integral Prediction vs Numerical Solution', fontweight='bold')
             axes[1, i].set_xlabel('x')
             axes[1, i].set_ylabel('∫₀ˣ u(s) ds')
             axes[1, i].legend()
@@ -586,7 +585,7 @@ class ModelEvaluator:
             mean_error = torch.mean(error).item()
             max_error = torch.max(error).item()
             
-            print(f"测试函数 {i+1}: 平均误差 = {mean_error:.6f}, 最大误差 = {max_error:.6f}")
+            print(f"Test Function {i+1}: Mean Error = {mean_error:.6f}, Max Error = {max_error:.6f}")
         
         if save_plot:
             plt.savefig(os.path.join(self.save_dir, 'generalization_test.png'), 
@@ -595,8 +594,8 @@ class ModelEvaluator:
         plt.tight_layout()
         plt.show()
         
-        print("\n🎉 演示完成！DeepONet成功处理了训练时未见过的高斯函数！")
-        print("💡 这证明了模型的泛化能力和算子学习的威力。")
+        print("\n🎉 Demo Complete! DeepONet successfully handled unseen Gaussian functions!")
+        print("💡 This demonstrates the model's generalization capability and the power of operator learning.")
 
 
 # ==================== 主函数 ====================
@@ -698,7 +697,7 @@ def main():
     print("✅ 训练流程完成！")
     print("="*60)
     print(f"📁 所有结果已保存到: {config['save_dir']}")
-    print("📊 文件列表:")
+    print("📊 File List:")
     for file in os.listdir(config['save_dir']):
         print(f"   - {file}")
     
