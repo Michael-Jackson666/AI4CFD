@@ -1,0 +1,1 @@
+Epoch,Total_Loss,Vlasov_Loss,Poisson_Loss,IC_Loss,Symmetry_Loss,Time_s

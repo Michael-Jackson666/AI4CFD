@@ -370,8 +370,8 @@ if __name__ == '__main__':
         'PERTURB_AMP': 0.05,            # Amplitude of the initial density perturbation that seeds the instability
 
         # --- Neural Network Architecture ---
-        'NN_LAYERS': 6,                 # Number of hidden layers in the MLP
-        'NN_NEURONS': 64,               # Number of neurons per hidden layer
+        'NN_LAYERS': 12,                 # Number of hidden layers in the MLP
+        'NN_NEURONS': 512,               # Number of neurons per hidden layer
 
         # --- Training Hyperparameters ---
         'EPOCHS': 1000000,               # Total number of training epochs
@@ -389,7 +389,7 @@ if __name__ == '__main__':
         'V_QUAD_POINTS': 128,           # Number of points for numerical integration over velocity
         'LOG_FREQUENCY': 1000,          # How often to print logs and save to TensorBoard (in epochs)
         'PLOT_FREQUENCY': 100000,         # How often to generate and save plots (in epochs)
-        'PLOT_DIR': 'vlasov_poisson_remote_train_most' # Directory to save all results
+        'PLOT_DIR': 'reomote_ultra' # Directory to save all results
     }
     
     # Instantiate the solver and start the training
