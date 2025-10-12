@@ -374,8 +374,8 @@ if __name__ == '__main__':
         'NN_NEURONS': 64,               # Number of neurons per hidden layer
 
         # --- Training Hyperparameters ---
-        'EPOCHS': 100000,               # Total number of training epochs
-        'LEARNING_RATE': 1e-5,          # Initial learning rate for the Adam optimizer
+        'EPOCHS': 1000000,               # Total number of training epochs
+        'LEARNING_RATE': 1e-6,          # Initial learning rate for the Adam optimizer
         'N_PHY': 10000,                 # Number of collocation points for PDE residuals
         'N_IC': 2000,                   # Number of points for the initial condition
 
@@ -388,8 +388,8 @@ if __name__ == '__main__':
         # --- Numerical & Logging Parameters ---
         'V_QUAD_POINTS': 128,           # Number of points for numerical integration over velocity
         'LOG_FREQUENCY': 1000,          # How often to print logs and save to TensorBoard (in epochs)
-        'PLOT_FREQUENCY': 1000,         # How often to generate and save plots (in epochs)
-        'PLOT_DIR': 'vlasov_poisson_final_prototype' # Directory to save all results
+        'PLOT_FREQUENCY': 100000,         # How often to generate and save plots (in epochs)
+        'PLOT_DIR': 'vlasov_poisson_remote_train_most' # Directory to save all results
     }
     
     # Instantiate the solver and start the training
