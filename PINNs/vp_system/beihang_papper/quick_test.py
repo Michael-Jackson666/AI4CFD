@@ -98,7 +98,9 @@ class VlasovPoissonPINN:
             layers=config['NN_LAYERS'], neurons=config['NN_NEURONS']
         ).to(self.device)
         self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=config['LEARNING_RATE']
+            self.model.parameters(), 
+            lr=config['LEARNING_RATE'],
+            betas=(0.99, 0.999)
         )
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
             self.optimizer, gamma=0.99
@@ -121,8 +123,14 @@ class VlasovPoissonPINN:
     def _initial_condition(self, x, v):
         """Defines the initial distribution f(0,x,v) for the two-stream instability."""
         k = 2 * np.pi / self.config['X_MAX']
-        term1 = torch.exp(-((v - self.config['BEAM_V'])**2) / (2 * self.config['THERMAL_V']**2))
-        term2 = torch.exp(-((v + self.config['BEAM_V'])**2) / (2 * self.config['THERMAL_V']**2))
+
+        norm_factor = 1.0 / (self.config['THERMAL_V'] * np.sqrt(2 * np.pi))
+        term1 = norm_factor * torch.exp(
+            -((v - self.config['BEAM_V'])**2) / (2 * self.config['THERMAL_V']**2)
+        )
+        term2 = norm_factor * torch.exp(
+            -((v + self.config['BEAM_V'])**2) / (2 * self.config['THERMAL_V']**2)
+        )
         # The 0.5 factor properly normalizes the two-beam distribution.
         return 0.5 * (term1 + term2) * (1 + self.config['PERTURB_AMP'] * torch.cos(k * x))
 
@@ -366,16 +374,16 @@ if __name__ == '__main__':
         'NN_NEURONS': 64,               # Number of neurons per hidden layer
 
         # --- Training Hyperparameters ---
-        'EPOCHS': 1000,                # Total number of training epochs
-        'LEARNING_RATE': 2e-4,          # Initial learning rate for the Adam optimizer
+        'EPOCHS': 10000,                # Total number of training epochs
+        'LEARNING_RATE': 1e-5,          # Initial learning rate for the Adam optimizer
         'N_PHY': 10000,                 # Number of collocation points for PDE residuals
         'N_IC': 2000,                   # Number of points for the initial condition
 
         # --- Loss Function Weights (Crucial for convergence) ---
         'LAMBDA_VLASOV': 1.0,           # Weight for the Vlasov equation residual
-        'LAMBDA_POISSON': 1.0,          # Weight for the Poisson equation residual
-        'LAMBDA_IC': 100.0,             # Weight for the initial condition (should be high)
-        'LAMBDA_SYMM': 50.0,            # Weight for the velocity-symmetry constraint
+        'LAMBDA_POISSON': 5.0,          # Weight for the Poisson equation residual
+        'LAMBDA_IC': 500.0,             # Weight for the initial condition (should be high)
+        'LAMBDA_SYMM': 200.0,            # Weight for the velocity-symmetry constraint
 
         # --- Numerical & Logging Parameters ---
         'V_QUAD_POINTS': 128,           # Number of points for numerical integration over velocity
