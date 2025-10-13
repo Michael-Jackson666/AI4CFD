@@ -19,8 +19,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 # Set a global seed for reproducibility
 torch.manual_seed(42)
-np.random.seed(42)
-
 
 class MLP(nn.Module):
     """Defines the MLP, ensuring f >= 0 with Softplus."""
@@ -46,56 +44,61 @@ class VlasovPoissonPINN:
         print(f"Using device: {self.device}")
 
         self.domain = {
-            't': (0.0, config['T_MAX']),
-            'x': (0.0, config['X_MAX']),
-            'v': (-config['V_MAX'], config['V_MAX'])
+            't': (0.0, config['t_max']),
+            'x': (0.0, config['x_max']),
+            'v': (-config['v_max'], config['v_max'])
         }
 
         self.model = MLP(
-            layers=config['NN_LAYERS'], neurons=config['NN_NEURONS']
+            layers=config['nn_layers'], neurons=config['nn_neurons']
         ).to(self.device)
         self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=config['LEARNING_RATE'], betas=(0.9, 0.999) # Standard betas
+            self.model.parameters(), lr=config['learning_rate'], betas=(0.9, 0.999) # Standard betas
         )
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
             self.optimizer, gamma=0.99
         )
         
         v_quad = torch.linspace(
-            -config['V_MAX'], config['V_MAX'],
-            config['V_QUAD_POINTS'], device=self.device
+            -config['v_max'], config['v_max'],
+            config['v_quad_points'], device=self.device
         )
         self.v_quad = v_quad.view(1, 1, -1)
 
-        os.makedirs(self.config['PLOT_DIR'], exist_ok=True)
-        self.log_file_path = os.path.join(self.config['PLOT_DIR'], 'training_log.txt')
-        self.writer = SummaryWriter(log_dir=self.config['PLOT_DIR'])
+        os.makedirs(self.config['plot_dir'], exist_ok=True)
+        self.log_file_path = os.path.join(self.config['plot_dir'], 'training_log.txt')
+        self.writer = SummaryWriter(log_dir=self.config['plot_dir']) 
 
     def _initial_condition(self, x, v):
-        k = 2 * np.pi / self.config['X_MAX']
-        norm_factor = 1.0 / (self.config['THERMAL_V'] * np.sqrt(2 * np.pi))
-        term1 = norm_factor * torch.exp(-((v - self.config['BEAM_V'])**2) / (2 * self.config['THERMAL_V']**2))
-        term2 = norm_factor * torch.exp(-((v + self.config['BEAM_V'])**2) / (2 * self.config['THERMAL_V']**2))
-        return 0.5 * (term1 + term2) * (1 + self.config['PERTURB_AMP'] * torch.cos(k * x))
+        """Initial condition: perturbed double Maxwellian."""
+        k = 2 * torch.pi / self.config['x_max']
+        norm_factor = 1.0 / (self.config['thermal_v'] * torch.sqrt(torch.tensor(2 * torch.pi)))
+        term1 = norm_factor * torch.exp(-((v - self.config['beam_v'])**2) / (2 * self.config['thermal_v']**2))
+        term2 = norm_factor * torch.exp(-((v + self.config['beam_v'])**2) / (2 * self.config['thermal_v']**2))
+        return 0.5 * (term1 + term2) * (1 + self.config['perturb_amp'] * torch.cos(k * x))
 
     def _compute_ne(self, t, x):
-        t_exp = t.unsqueeze(2).expand(-1, -1, self.config['V_QUAD_POINTS'])
-        x_exp = x.unsqueeze(2).expand(-1, -1, self.config['V_QUAD_POINTS'])
+        """Computes electron density n_e(t,x) by integrating f over v using trapezoidal rule."""
+        t_exp = t.unsqueeze(2).expand(-1, -1, self.config['v_quad_points'])
+        x_exp = x.unsqueeze(2).expand(-1, -1, self.config['v_quad_points'])
         t_flat, x_flat = t_exp.reshape(-1, 1), x_exp.reshape(-1, 1)
         v_flat = self.v_quad.expand(t.shape[0], -1, -1).reshape(-1, 1)
         
         txv = torch.cat([t_flat, x_flat, v_flat], dim=1)
-        f_vals = self.model(txv).view(t.shape[0], self.config['V_QUAD_POINTS'])
+        f_vals = self.model(txv).view(t.shape[0], self.config['v_quad_points'])
         integral = torch.trapezoid(f_vals, self.v_quad.squeeze(), dim=1)
         return integral.unsqueeze(1)
 
     def _get_residuals(self, t, x, v):
+        """
+        Calculates the residuals for the Vlasov and Poisson equations.
+        """
         txv = torch.cat([t, x, v], dim=1)
         f = self.model(txv)
         df_d_txv = torch.autograd.grad(f, txv, torch.ones_like(f), create_graph=True)[0]
         df_dt, df_dx, df_dv = df_d_txv.split(1, dim=1)
         
-        x_grid_E = torch.linspace(0, self.config['X_MAX'], 101, device=self.device).unsqueeze(1).requires_grad_()
+        x_grid_E = torch.linspace(0, self.config['x_max'], 101, device=self.device).unsqueeze(1).requires_grad_()
         t_mean_E = torch.full_like(x_grid_E, t.mean().item())
         n_e_on_grid = self._compute_ne(t_mean_E, x_grid_E)
         charge_dev_on_grid = n_e_on_grid - 1.0
@@ -104,11 +107,23 @@ class VlasovPoissonPINN:
         E_on_grid = torch.cumsum(charge_dev_on_grid, dim=0) * dx_E
         E_on_grid = E_on_grid - torch.mean(E_on_grid)
         
-        E_interp = np.interp(
-            x.cpu().detach().numpy().flatten(), x_grid_E.cpu().detach().numpy().flatten(),
-            E_on_grid.cpu().detach().numpy().flatten()
-        )
-        E = torch.from_numpy(E_interp).to(self.device).float().unsqueeze(1)
+        # Use torch's interpolation instead of numpy
+        x_flat = x.flatten()
+        x_grid_flat = x_grid_E.flatten()
+        E_grid_flat = E_on_grid.flatten()
+        
+        # Find indices for interpolation using searchsorted
+        indices = torch.searchsorted(x_grid_flat.detach(), x_flat.detach())
+        indices = torch.clamp(indices, 1, len(x_grid_flat) - 1)
+        
+        x0 = x_grid_flat[indices - 1]
+        x1 = x_grid_flat[indices]
+        y0 = E_grid_flat[indices - 1]
+        y1 = E_grid_flat[indices]
+        
+        # Linear interpolation: y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+        E = y0 + (x_flat - x0) * (y1 - y0) / (x1 - x0 + 1e-10)
+        E = E.unsqueeze(1)
         
         vlasov_residual = df_dt + v * df_dx - E * df_dv
         
@@ -118,7 +133,7 @@ class VlasovPoissonPINN:
         return vlasov_residual, poisson_residual_on_grid
     
     # --- NEW: Classic 3-component loss function ---
-    def compute_classic_loss(self, t_pde, x_pde, v_pde, t_ic, x_ic, v_ic, t_bc, x_bc, v_bc):
+    def compute_loss(self, t_pde, x_pde, v_pde, t_ic, x_ic, v_ic, t_bc, x_bc, v_bc):
         """
         Calculates the classic PINN loss, comprising PDE, IC, and BC residuals.
         """
@@ -135,13 +150,13 @@ class VlasovPoissonPINN:
 
         # --- 3. Boundary Condition (BC) Loss ---
         # Spatial periodic boundary: f(t, x_min, v) = f(t, x_max, v)
-        x_min = torch.full_like(x_bc, self.domain['x'][0])
-        x_max = torch.full_like(x_bc, self.domain['x'][1])
-        txv_min = torch.cat([t_bc, x_min, v_bc], dim=1)
-        txv_max = torch.cat([t_bc, x_max, v_bc], dim=1)
-        f_bc_min = self.model(txv_min)
-        f_bc_max = self.model(txv_max)
-        loss_bc_periodic = torch.mean((f_bc_min - f_bc_max)**2)
+        # x_min = torch.full_like(x_bc, self.domain['x'][0])
+        # x_max = torch.full_like(x_bc, self.domain['x'][1])
+        # txv_min = torch.cat([t_bc, x_min, v_bc], dim=1)
+        # txv_max = torch.cat([t_bc, x_max, v_bc], dim=1)
+        # f_bc_min = self.model(txv_min)
+        # f_bc_max = self.model(txv_max)
+        # loss_bc_periodic = torch.mean((f_bc_min - f_bc_max)**2)
         
         # Velocity boundary: f(t, x, v_min/v_max) = 0
         v_min = torch.full_like(v_bc, self.domain['v'][0])
@@ -152,18 +167,18 @@ class VlasovPoissonPINN:
         f_bc_vmax = self.model(txv_vmax)
         loss_bc_zero = torch.mean(f_bc_vmin**2) + torch.mean(f_bc_vmax**2)
 
-        loss_bc = loss_bc_periodic + loss_bc_zero
+        # loss_bc = loss_bc_periodic + loss_bc_zero
+        loss_bc = loss_bc_zero  # Using only velocity BC for simplicity
 
         # --- Total Loss ---
         total_loss = (
-            self.config['LAMBDA_PDE'] * loss_pde +
-            self.config['LAMBDA_IC'] * loss_ic +
-            self.config['LAMBDA_BC'] * loss_bc
+            self.config['weight_pde'] * loss_pde +
+            self.config['weight_ic'] * loss_ic +
+            self.config['weight_bc'] * loss_bc
         )
         
         return total_loss, loss_pde, loss_ic, loss_bc
 
-    # --- UPDATED: train function ---
     def train(self):
         """The main training loop using the classic 3-component loss."""
         print("Starting training with classic PDE, IC, BC loss...")
@@ -172,25 +187,25 @@ class VlasovPoissonPINN:
         with open(self.log_file_path, 'w') as f:
             f.write('Epoch,Total_Loss,PDE_Loss,IC_Loss,BC_Loss,Time_s\n')
 
-        for epoch in range(self.config['EPOCHS']):
+        for epoch in range(self.config['epochs']):
             self.model.train()
             
             # Sample points for PDE, IC, and BC
-            t_pde = torch.rand(self.config['N_PDE'], 1, device=self.device) * self.domain['t'][1]
-            x_pde = torch.rand(self.config['N_PDE'], 1, device=self.device) * self.domain['x'][1]
-            v_pde = (torch.rand(self.config['N_PDE'], 1, device=self.device) - 0.5) * 2 * self.domain['v'][1]
+            t_pde = torch.rand(self.config['n_pde'], 1, device=self.device) * self.domain['t'][1]
+            x_pde = torch.rand(self.config['n_pde'], 1, device=self.device) * self.domain['x'][1]
+            v_pde = (torch.rand(self.config['n_pde'], 1, device=self.device) - 0.5) * 2 * self.domain['v'][1]
             
-            t_ic = torch.zeros(self.config['N_IC'], 1, device=self.device)
-            x_ic = torch.rand(self.config['N_IC'], 1, device=self.device) * self.domain['x'][1]
-            v_ic = (torch.rand(self.config['N_IC'], 1, device=self.device) - 0.5) * 2 * self.domain['v'][1]
+            t_ic = torch.zeros(self.config['n_ic'], 1, device=self.device)
+            x_ic = torch.rand(self.config['n_ic'], 1, device=self.device) * self.domain['x'][1]
+            v_ic = (torch.rand(self.config['n_ic'], 1, device=self.device) - 0.5) * 2 * self.domain['v'][1]
             
-            t_bc = torch.rand(self.config['N_BC'], 1, device=self.device) * self.domain['t'][1]
-            x_bc = torch.rand(self.config['N_BC'], 1, device=self.device) * self.domain['x'][1]
-            v_bc = (torch.rand(self.config['N_BC'], 1, device=self.device) - 0.5) * 2 * self.domain['v'][1]
+            t_bc = torch.rand(self.config['n_bc'], 1, device=self.device) * self.domain['t'][1]
+            x_bc = torch.rand(self.config['n_bc'], 1, device=self.device) * self.domain['x'][1]
+            v_bc = (torch.rand(self.config['n_bc'], 1, device=self.device) - 0.5) * 2 * self.domain['v'][1]
 
             self.optimizer.zero_grad()
             loss, loss_pde, loss_ic, loss_bc = \
-                self.compute_classic_loss(t_pde, x_pde, v_pde, t_ic, x_ic, v_ic, t_bc, x_bc, v_bc)
+                self.compute_loss(t_pde, x_pde, v_pde, t_ic, x_ic, v_ic, t_bc, x_bc, v_bc)
             
             if torch.isnan(loss):
                 print(f"Warning: NaN loss at epoch {epoch+1}. Skipping.")
@@ -202,10 +217,10 @@ class VlasovPoissonPINN:
             
             if (epoch + 1) % 1000 == 0: self.scheduler.step()
 
-            if (epoch + 1) % self.config['LOG_FREQUENCY'] == 0:
+            if (epoch + 1) % self.config['log_frequency'] == 0:
                 elapsed_time = time.time() - start_time
                 print(
-                    f"Epoch [{epoch+1}/{self.config['EPOCHS']}] | "
+                    f"Epoch [{epoch+1}/{self.config['epochs']}] | "
                     f"Loss: {loss.item():.4e} | L_pde: {loss_pde.item():.4e} | "
                     f"L_ic: {loss_ic.item():.4e} | L_bc: {loss_bc.item():.4e} | "
                     f"Time: {elapsed_time:.2f}s"
@@ -221,7 +236,7 @@ class VlasovPoissonPINN:
                 self.writer.add_scalar('Loss/Initial_Condition', loss_ic.item(), epoch + 1)
                 self.writer.add_scalar('Loss/Boundary_Condition', loss_bc.item(), epoch + 1)
             
-            if (epoch + 1) % self.config['PLOT_FREQUENCY'] == 0:
+            if (epoch + 1) % self.config['plot_frequency'] == 0:
                 self.plot_results(epoch + 1)
         
         self.writer.close()
@@ -281,7 +296,7 @@ class VlasovPoissonPINN:
         ax_e.set_xlabel('x (position)'); ax_e.set_ylabel('E (Electric Field)')
 
         plt.tight_layout()
-        plt.savefig(os.path.join(self.config['PLOT_DIR'], f'results_epoch_{epoch}.png'))
+        plt.savefig(os.path.join(self.config['plot_dir'], f'results_epoch_{epoch}.png'))
         plt.close(fig)
 
     # --- UPDATED: plot_loss_history function ---
@@ -297,7 +312,7 @@ class VlasovPoissonPINN:
             plt.plot(log_data[:, 0], log_data[:, 4], 'b--', alpha=0.7, label='BC Loss')
             plt.yscale('log'); plt.title('Loss History'); plt.xlabel('Epoch')
             plt.ylabel('Loss (log scale)'); plt.legend(); plt.grid(True)
-            plt.savefig(os.path.join(self.config['PLOT_DIR'], 'loss_history.png'))
+            plt.savefig(os.path.join(self.config['plot_dir'], 'loss_history.png'))
             plt.close()
             print("Loss history plot saved.")
         except Exception as e:
@@ -308,36 +323,36 @@ class VlasovPoissonPINN:
 if __name__ == '__main__':
     configuration = {
         # --- Domain Parameters ---
-        'T_MAX': 15.0,
-        'X_MAX': 2 * np.pi / 0.5,
-        'V_MAX': 6.0,
+        't_max': 62.5,
+        'x_max': 10,
+        'v_max': 5.0,
 
         # --- Physics Parameters ---
-        'BEAM_V': 2.4,
-        'THERMAL_V': 0.2,
-        'PERTURB_AMP': 0.05,
+        'beam_v': 1.0,
+        'thermal_v': 0.02,
+        'perturb_amp': 0.05,
 
         # --- Neural Network Architecture ---
-        'NN_LAYERS': 12,
-        'NN_NEURONS': 256,
+        'nn_layers': 12,
+        'nn_neurons': 256,
 
         # --- Training Hyperparameters ---
-        'EPOCHS': 10000,
-        'LEARNING_RATE': 1e-5,
-        'N_PDE': 15000,                # Number of points for PDE residuals
-        'N_IC': 5000,                  # Number of points for Initial Condition
-        'N_BC': 5000,                  # Number of points for Boundary Condition
+        'epochs': 1000,
+        'learning_rate': 1e-4,
+        'n_pde': 70000,                # Number of points for PDE residuals
+        'n_ic': 700,                  # Number of points for Initial Condition
+        'n_bc': 1100,                  # Number of points for Boundary Condition
 
         # --- Loss Function Weights (Classic Setup) ---
-        'LAMBDA_PDE': 1.0,             # Weight for the governing equations
-        'LAMBDA_IC': 100.0,            # High weight for the initial condition
-        'LAMBDA_BC': 100.0,            # High weight for the boundary conditions
+        'weight_pde': 1.0,             # Weight for the governing equations
+        'weight_ic': 5.0,            # High weight for the initial condition
+        'weight_bc': 10.0,            # High weight for the boundary conditions
 
         # --- Numerical & Logging Parameters ---
-        'V_QUAD_POINTS': 128,
-        'LOG_FREQUENCY': 200,
-        'PLOT_FREQUENCY': 2000,
-        'PLOT_DIR': 'local_classic_10000'
+        'v_quad_points': 128,
+        'log_frequency': 200,
+        'plot_frequency': 200,
+        'plot_dir': 'local_1000'
     }
     
     pinn_solver = VlasovPoissonPINN(configuration)
