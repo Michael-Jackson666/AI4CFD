@@ -1,0 +1,1 @@
+Epoch,Total_Loss,PDE_Loss,IC_Loss,BC_Loss,Time_s

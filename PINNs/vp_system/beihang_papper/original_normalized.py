@@ -48,6 +48,19 @@ class VlasovPoissonPINN:
             'x': (0.0, config['x_max']),
             'v': (-config['v_max'], config['v_max'])
         }
+        
+        # Normalization parameters: map domain to [-1, 1]
+        self.t_mean = config['t_max'] / 2.0
+        self.t_scale = config['t_max'] / 2.0
+        self.x_mean = config['x_max'] / 2.0
+        self.x_scale = config['x_max'] / 2.0
+        self.v_mean = 0.0  # v is already symmetric around 0
+        self.v_scale = config['v_max']
+        
+        print(f"Normalization enabled:")
+        print(f"  t: [{self.domain['t'][0]}, {self.domain['t'][1]}] -> [-1, 1]")
+        print(f"  x: [{self.domain['x'][0]}, {self.domain['x'][1]}] -> [-1, 1]")
+        print(f"  v: [{self.domain['v'][0]}, {self.domain['v'][1]}] -> [-1, 1]")
 
         self.model = MLP(
             layers=config['nn_layers'], neurons=config['nn_neurons']
@@ -67,7 +80,31 @@ class VlasovPoissonPINN:
 
         os.makedirs(self.config['plot_dir'], exist_ok=True)
         self.log_file_path = os.path.join(self.config['plot_dir'], 'training_log.txt')
-        self.writer = SummaryWriter(log_dir=self.config['plot_dir']) 
+        self.writer = SummaryWriter(log_dir=self.config['plot_dir'])
+    
+    def _normalize_t(self, t):
+        """Normalize time to [-1, 1]"""
+        return (t - self.t_mean) / self.t_scale
+    
+    def _normalize_x(self, x):
+        """Normalize space to [-1, 1]"""
+        return (x - self.x_mean) / self.x_scale
+    
+    def _normalize_v(self, v):
+        """Normalize velocity to [-1, 1]"""
+        return (v - self.v_mean) / self.v_scale
+    
+    def _denormalize_t(self, t_norm):
+        """Denormalize time from [-1, 1] to original range"""
+        return t_norm * self.t_scale + self.t_mean
+    
+    def _denormalize_x(self, x_norm):
+        """Denormalize space from [-1, 1] to original range"""
+        return x_norm * self.x_scale + self.x_mean
+    
+    def _denormalize_v(self, v_norm):
+        """Denormalize velocity from [-1, 1] to original range"""
+        return v_norm * self.v_scale + self.v_mean
 
     def _initial_condition(self, x, v):
         """Initial condition: perturbed double Maxwellian."""
@@ -84,19 +121,38 @@ class VlasovPoissonPINN:
         t_flat, x_flat = t_exp.reshape(-1, 1), x_exp.reshape(-1, 1)
         v_flat = self.v_quad.expand(t.shape[0], -1, -1).reshape(-1, 1)
         
-        txv = torch.cat([t_flat, x_flat, v_flat], dim=1)
-        f_vals = self.model(txv).view(t.shape[0], self.config['v_quad_points'])
+        # Normalize inputs before passing to model
+        t_norm = self._normalize_t(t_flat)
+        x_norm = self._normalize_x(x_flat)
+        v_norm = self._normalize_v(v_flat)
+        
+        txv_norm = torch.cat([t_norm, x_norm, v_norm], dim=1)
+        f_vals = self.model(txv_norm).view(t.shape[0], self.config['v_quad_points'])
         integral = torch.trapezoid(f_vals, self.v_quad.squeeze(), dim=1)
         return integral.unsqueeze(1)
 
     def _get_residuals(self, t, x, v):
         """
         Calculates the residuals for the Vlasov and Poisson equations.
+        Inputs are in physical domain, will be normalized internally.
         """
-        txv = torch.cat([t, x, v], dim=1)
-        f = self.model(txv)
-        df_d_txv = torch.autograd.grad(f, txv, torch.ones_like(f), create_graph=True)[0]
-        df_dt, df_dx, df_dv = df_d_txv.split(1, dim=1)
+        # Normalize inputs to [-1, 1]
+        t_norm = self._normalize_t(t)
+        x_norm = self._normalize_x(x)
+        v_norm = self._normalize_v(v)
+        
+        txv_norm = torch.cat([t_norm, x_norm, v_norm], dim=1)
+        f = self.model(txv_norm)
+        
+        # Compute gradients w.r.t. normalized coordinates
+        df_d_txv_norm = torch.autograd.grad(f, txv_norm, torch.ones_like(f), create_graph=True)[0]
+        df_dt_norm, df_dx_norm, df_dv_norm = df_d_txv_norm.split(1, dim=1)
+        
+        # Transform gradients back to physical domain using chain rule
+        # df/dt_physical = df/dt_normalized * dt_normalized/dt_physical = df/dt_norm / t_scale
+        df_dt = df_dt_norm / self.t_scale
+        df_dx = df_dx_norm / self.x_scale
+        df_dv = df_dv_norm / self.v_scale
         
         x_grid_E = torch.linspace(0, self.config['x_max'], 101, device=self.device).unsqueeze(1).requires_grad_()
         t_mean_E = torch.full_like(x_grid_E, t.mean().item())
@@ -143,8 +199,11 @@ class VlasovPoissonPINN:
         loss_pde = torch.mean(vlasov_res**2) + torch.mean(poisson_res_grid**2)
 
         # --- 2. Initial Condition (IC) Loss ---
-        ic_txv = torch.cat([t_ic, x_ic, v_ic], dim=1)
-        f_pred_ic = self.model(ic_txv)
+        t_ic_norm = self._normalize_t(t_ic)
+        x_ic_norm = self._normalize_x(x_ic)
+        v_ic_norm = self._normalize_v(v_ic)
+        ic_txv_norm = torch.cat([t_ic_norm, x_ic_norm, v_ic_norm], dim=1)
+        f_pred_ic = self.model(ic_txv_norm)
         f_true_ic = self._initial_condition(x_ic, v_ic)
         loss_ic = torch.mean((f_pred_ic - f_true_ic)**2)
 
@@ -161,10 +220,17 @@ class VlasovPoissonPINN:
         # Velocity boundary: f(t, x, v_min/v_max) = 0
         v_min = torch.full_like(v_bc, self.domain['v'][0])
         v_max = torch.full_like(v_bc, self.domain['v'][1])
-        txv_vmin = torch.cat([t_bc, x_bc, v_min], dim=1)
-        txv_vmax = torch.cat([t_bc, x_bc, v_max], dim=1)
-        f_bc_vmin = self.model(txv_vmin)
-        f_bc_vmax = self.model(txv_vmax)
+        
+        # Normalize boundary condition points
+        t_bc_norm = self._normalize_t(t_bc)
+        x_bc_norm = self._normalize_x(x_bc)
+        v_min_norm = self._normalize_v(v_min)
+        v_max_norm = self._normalize_v(v_max)
+        
+        txv_vmin_norm = torch.cat([t_bc_norm, x_bc_norm, v_min_norm], dim=1)
+        txv_vmax_norm = torch.cat([t_bc_norm, x_bc_norm, v_max_norm], dim=1)
+        f_bc_vmin = self.model(txv_vmin_norm)
+        f_bc_vmax = self.model(txv_vmax_norm)
         loss_bc_zero = torch.mean(f_bc_vmin**2) + torch.mean(f_bc_vmax**2)
 
         # loss_bc = loss_bc_periodic + loss_bc_zero
@@ -352,7 +418,7 @@ if __name__ == '__main__':
         'v_quad_points': 128,
         'log_frequency': 200,
         'plot_frequency': 200,
-        'plot_dir': 'local_1000'
+        'plot_dir': 'local_1000_new'
     }
     
     pinn_solver = VlasovPoissonPINN(configuration)
