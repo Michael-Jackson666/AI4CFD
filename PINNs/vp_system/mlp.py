@@ -3,7 +3,6 @@ Multi-Layer Perceptron (MLP) module for PINN.
 Defines the neural network architecture with Softplus activation to ensure f >= 0.
 """
 
-import torch
 import torch.nn as nn
 
 

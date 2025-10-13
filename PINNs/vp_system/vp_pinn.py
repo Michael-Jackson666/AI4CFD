@@ -4,10 +4,8 @@ the 1D Vlasov-Poisson system with input normalization.
 """
 
 import torch
-import torch.nn as nn
 import os
 import time
-from torch.utils.tensorboard import SummaryWriter
 from mlp import MLP
 
 
@@ -74,7 +72,6 @@ class VlasovPoissonPINN:
         # Setup logging and visualization
         os.makedirs(self.config['plot_dir'], exist_ok=True)
         self.log_file_path = os.path.join(self.config['plot_dir'], 'training_log.txt')
-        self.writer = SummaryWriter(log_dir=self.config['plot_dir'])
     
     # ==================== Normalization Methods ====================
     
@@ -352,21 +349,14 @@ class VlasovPoissonPINN:
                             f"{loss_ic.item()},{loss_bc.item()},{elapsed_time}\n")
                 with open(self.log_file_path, 'a') as f:
                     f.write(log_data)
-                
-                # TensorBoard logging
-                self.writer.add_scalar('Loss/Total', loss.item(), epoch + 1)
-                self.writer.add_scalar('Loss/PDE', loss_pde.item(), epoch + 1)
-                self.writer.add_scalar('Loss/Initial_Condition', loss_ic.item(), epoch + 1)
-                self.writer.add_scalar('Loss/Boundary_Condition', loss_bc.item(), epoch + 1)
             
             # Visualization
             if (epoch + 1) % self.config['plot_frequency'] == 0:
                 # Import here to avoid circular dependency
-                from visualization import plot_results, plot_loss_history
+                from visualization import plot_results
                 plot_results(self, epoch + 1)
         
         # Final tasks
-        self.writer.close()
         from visualization import plot_loss_history
         plot_loss_history(self)
         print("Training finished.")
