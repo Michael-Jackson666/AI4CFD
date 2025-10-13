@@ -108,17 +108,30 @@ class VlasovPoissonPINN:
         return integral.unsqueeze(1)
 
     def _get_residuals(self, t, x, v):
-        """Calculates the residuals for the Vlasov and Poisson equations."""
-        txv = torch.cat([t, x, v], dim=1)
+        """
+        Calculates the residuals for the Vlasov and Poisson equations,
+        correctly handling gradients through the normalization layer.
+        """
+        # Make original coordinates require gradients
+        t.requires_grad_(True)
+        x.requires_grad_(True)
+        v.requires_grad_(True)
         
-        # The model's output f is a function of the physical coordinates t,x,v
-        # The normalization is handled inside the _forward method
-        f = self._forward(t, x, v)
+        # --- CRITICAL FIX: Build a continuous computation graph ---
+        # 1. Normalize the inputs
+        t_norm, x_norm, v_norm = self._normalize(t, x, v)
+        txv_normalized = torch.cat([t_norm, x_norm, v_norm], dim=1)
         
-        # CRITICAL: Compute gradients with respect to the original physical coordinates
-        df_d_txv = torch.autograd.grad(f, txv, torch.ones_like(f), create_graph=True)[0]
-        df_dt, df_dx, df_dv = df_d_txv.split(1, dim=1)
+        # 2. Get model output from normalized inputs
+        f = self.model(txv_normalized)
         
+        # 3. Compute gradients with respect to the ORIGINAL physical coordinates.
+        #    PyTorch will automatically apply the chain rule through the normalization.
+        df_dt = torch.autograd.grad(f, t, torch.ones_like(f), create_graph=True)[0]
+        df_dx = torch.autograd.grad(f, x, torch.ones_like(f), create_graph=True)[0]
+        df_dv = torch.autograd.grad(f, v, torch.ones_like(f), create_graph=True)[0]
+        
+        # The rest of the function remains the same, as it operates on physical coordinates
         x_grid_E = torch.linspace(0, self.config['x_max'], 101, device=self.device).unsqueeze(1).requires_grad_()
         t_mean_E = torch.full_like(x_grid_E, t.mean().item())
         n_e_on_grid = self._compute_ne(t_mean_E, x_grid_E)
@@ -128,7 +141,6 @@ class VlasovPoissonPINN:
         E_on_grid = torch.cumsum(charge_dev_on_grid, dim=0) * dx_E
         E_on_grid = E_on_grid - torch.mean(E_on_grid)
         
-        # Interpolation (switched back to NumPy for simplicity and robustness)
         E_interp = np.interp(
             x.cpu().detach().numpy().flatten(),
             x_grid_E.cpu().detach().numpy().flatten(),
@@ -142,6 +154,7 @@ class VlasovPoissonPINN:
         poisson_residual_on_grid = dE_dx_on_grid - charge_dev_on_grid
 
         return vlasov_residual, poisson_residual_on_grid
+
     
     def compute_loss(self, t_pde, x_pde, v_pde, t_ic, x_ic, v_ic, t_bc, x_bc, v_bc):
         """Calculates the classic PINN loss, comprising PDE, IC, and BC residuals."""
@@ -241,15 +254,17 @@ class VlasovPoissonPINN:
         
         fig = plt.figure(figsize=(18, 12)); gs = GridSpec(2, 3, figure=fig)
 
+        # Plot f(t,x,v) at different times
         for i, t_val in enumerate(plot_times):
-            T = torch.full_like(X, float(t_val))
-            f_pred = self._forward(T.flatten(), X.flatten(), V.flatten()).reshape(X.shape) # Use wrapper
+            T = torch.full_like(X, t_val)
+            f_pred = self.model(torch.stack([T.flatten(), X.flatten(), V.flatten()], dim=1)).reshape(X.shape)
             ax = fig.add_subplot(gs[0, i])
             im = ax.pcolormesh(X.cpu(), V.cpu(), f_pred.cpu(), cmap='jet', shading='auto')
             fig.colorbar(im, ax=ax)
             ax.set_xlabel('x (position)'); ax.set_ylabel('v (velocity)')
-            ax.set_title(rf'PINN Solution f(t,x,v) at t={t_val:.2f} $\omega_p^{{-1}}$')
+            ax.set_title(f'PINN Solution f(t,x,v) at t={t_val:.2f} $\phi_p^{-1}$')
         
+        # Plot True Initial Condition
         ax_ic = fig.add_subplot(gs[1, 0])
         f_ic_true = self._initial_condition(X, V)
         im_ic = ax_ic.pcolormesh(X.cpu(), V.cpu(), f_ic_true.cpu(), cmap='jet', shading='auto')
@@ -257,6 +272,7 @@ class VlasovPoissonPINN:
         ax_ic.set_xlabel('x (position)'); ax_ic.set_ylabel('v (velocity)')
         ax_ic.set_title('True Initial Condition f(0,x,v)')
 
+        # Plot final electron density
         t_final = torch.full((x_grid.shape[0], 1), self.domain['t'][1], device=self.device)
         n_e_final = self._compute_ne(t_final, x_grid.unsqueeze(1))
         ax_ne = fig.add_subplot(gs[1, 1])
@@ -266,6 +282,7 @@ class VlasovPoissonPINN:
         ax_ne.set_title(f'Electron Density n_e(t,x) at t={self.domain["t"][1]:.2f}')
         ax_ne.set_xlabel('x (position)'); ax_ne.set_ylabel('n_e')
 
+        # Plot final electric field
         ax_e = fig.add_subplot(gs[1, 2])
         charge_dev_final = n_e_final - 1.0
         dx_final = x_grid[1] - x_grid[0]
@@ -280,10 +297,24 @@ class VlasovPoissonPINN:
         plt.savefig(os.path.join(self.config['plot_dir'], f'results_epoch_{epoch}.png'))
         plt.close(fig)
 
+    # --- UPDATED: plot_loss_history function ---
     def plot_loss_history(self):
         """Plots the history for the classic 3-component loss."""
-        # ... (This function remains unchanged, you can copy it from the previous version)
-        pass
+        print("Plotting loss history...")
+        try:
+            log_data = np.loadtxt(self.log_file_path, delimiter=',', skiprows=1)
+            plt.figure(figsize=(12, 8))
+            plt.plot(log_data[:, 0], log_data[:, 1], 'k', label='Total Loss')
+            plt.plot(log_data[:, 0], log_data[:, 2], 'r--', alpha=0.7, label='PDE Loss')
+            plt.plot(log_data[:, 0], log_data[:, 3], 'g--', alpha=0.7, label='IC Loss')
+            plt.plot(log_data[:, 0], log_data[:, 4], 'b--', alpha=0.7, label='BC Loss')
+            plt.yscale('log'); plt.title('Loss History'); plt.xlabel('Epoch')
+            plt.ylabel('Loss (log scale)'); plt.legend(); plt.grid(True)
+            plt.savefig(os.path.join(self.config['plot_dir'], 'loss_history.png'))
+            plt.close()
+            print("Loss history plot saved.")
+        except Exception as e:
+            print(f"Could not plot loss history: {e}")
 
 
 if __name__ == '__main__':
