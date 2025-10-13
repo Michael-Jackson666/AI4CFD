@@ -231,8 +231,58 @@ class VlasovPoissonPINN:
     # (plot_results function can remain the same)
     @torch.no_grad()
     def plot_results(self, epoch):
-        # ... (no changes needed here, you can use your preferred 2x3 or 2x4 layout)
-        pass
+        """Generates and saves plots of the current simulation state."""
+        self.model.eval()
+        print(f"Generating plots for epoch {epoch}...")
+        x_grid = torch.linspace(self.domain['x'][0], self.domain['x'][1], 100, device=self.device)
+        v_grid = torch.linspace(self.domain['v'][0], self.domain['v'][1], 100, device=self.device)
+        X, V = torch.meshgrid(x_grid, v_grid, indexing='ij')
+        plot_times = [0.0, self.domain['t'][1] / 2, self.domain['t'][1]]
+        
+        fig = plt.figure(figsize=(18, 12)); gs = GridSpec(2, 3, figure=fig)
+
+        # Plot f(t,x,v) at different times
+        for i, t_val in enumerate(plot_times):
+            T = torch.full_like(X, t_val)
+            f_pred = self.model(torch.stack([T.flatten(), X.flatten(), V.flatten()], dim=1)).reshape(X.shape)
+            ax = fig.add_subplot(gs[0, i])
+            im = ax.pcolormesh(X.cpu(), V.cpu(), f_pred.cpu(), cmap='jet', shading='auto')
+            fig.colorbar(im, ax=ax)
+            ax.set_xlabel('x (position)'); ax.set_ylabel('v (velocity)')
+            ax.set_title(f'PINN Solution f(t,x,v) at t={t_val:.2f}')
+        
+        # Plot True Initial Condition
+        ax_ic = fig.add_subplot(gs[1, 0])
+        f_ic_true = self._initial_condition(X, V)
+        im_ic = ax_ic.pcolormesh(X.cpu(), V.cpu(), f_ic_true.cpu(), cmap='jet', shading='auto')
+        fig.colorbar(im_ic, ax=ax_ic)
+        ax_ic.set_xlabel('x (position)'); ax_ic.set_ylabel('v (velocity)')
+        ax_ic.set_title('True Initial Condition f(0,x,v)')
+
+        # Plot final electron density
+        t_final = torch.full((x_grid.shape[0], 1), self.domain['t'][1], device=self.device)
+        n_e_final = self._compute_ne(t_final, x_grid.unsqueeze(1))
+        ax_ne = fig.add_subplot(gs[1, 1])
+        ax_ne.plot(x_grid.cpu(), n_e_final.cpu(), 'b-', label='Electron Density')
+        ax_ne.axhline(y=1.0, color='r', linestyle='--', label='Background Density')
+        ax_ne.legend(); ax_ne.grid(True)
+        ax_ne.set_title(f'Electron Density n_e(t,x) at t={self.domain["t"][1]:.2f}')
+        ax_ne.set_xlabel('x (position)'); ax_ne.set_ylabel('n_e')
+
+        # Plot final electric field
+        ax_e = fig.add_subplot(gs[1, 2])
+        charge_dev_final = n_e_final - 1.0
+        dx_final = x_grid[1] - x_grid[0]
+        E_final = torch.cumsum(charge_dev_final, dim=0) * dx_final
+        E_final -= torch.mean(E_final)
+        ax_e.plot(x_grid.cpu(), E_final.cpu(), 'g-')
+        ax_e.grid(True)
+        ax_e.set_title(f'Electric Field E(t,x) at t={self.domain["t"][1]:.2f}')
+        ax_e.set_xlabel('x (position)'); ax_e.set_ylabel('E (Electric Field)')
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.config['PLOT_DIR'], f'results_epoch_{epoch}.png'))
+        plt.close(fig)
 
     # --- UPDATED: plot_loss_history function ---
     def plot_loss_history(self):
@@ -268,12 +318,12 @@ if __name__ == '__main__':
         'PERTURB_AMP': 0.05,
 
         # --- Neural Network Architecture ---
-        'NN_LAYERS': 8,
-        'NN_NEURONS': 128,
+        'NN_LAYERS': 12,
+        'NN_NEURONS': 256,
 
         # --- Training Hyperparameters ---
-        'EPOCHS': 1000,
-        'LEARNING_RATE': 1e-4,
+        'EPOCHS': 10000,
+        'LEARNING_RATE': 1e-5,
         'N_PDE': 15000,                # Number of points for PDE residuals
         'N_IC': 5000,                  # Number of points for Initial Condition
         'N_BC': 5000,                  # Number of points for Boundary Condition
@@ -286,8 +336,8 @@ if __name__ == '__main__':
         # --- Numerical & Logging Parameters ---
         'V_QUAD_POINTS': 128,
         'LOG_FREQUENCY': 200,
-        'PLOT_FREQUENCY': 250,
-        'PLOT_DIR': 'classic_1000'
+        'PLOT_FREQUENCY': 2000,
+        'PLOT_DIR': 'local_classic_10000'
     }
     
     pinn_solver = VlasovPoissonPINN(configuration)
