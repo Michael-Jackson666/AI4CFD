@@ -38,7 +38,7 @@ def plot_results(pinn_solver, epoch):
     X, V = torch.meshgrid(x_grid, v_grid, indexing='ij')
     
     # Select time snapshots to plot
-    plot_times = [25, 37.5, 50]
+    plot_times = [0, 25, 50]
     
     # Create figure with 2x3 grid
     fig = plt.figure(figsize=(18, 12))

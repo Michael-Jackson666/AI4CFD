@@ -7,6 +7,7 @@ import torch
 import os
 import time
 from mlp import MLP
+from transformer import TransformerPINN, HybridTransformerPINN, LightweightTransformerPINN
 
 
 class VlasovPoissonPINN:
@@ -46,11 +47,55 @@ class VlasovPoissonPINN:
         print(f"  x: [{self.domain['x'][0]}, {self.domain['x'][1]}] -> [-1, 1]")
         print(f"  v: [{self.domain['v'][0]}, {self.domain['v'][1]}] -> [-1, 1]")
 
-        # Initialize neural network model
-        self.model = MLP(
-            layers=config['nn_layers'], 
-            neurons=config['nn_neurons']
-        ).to(self.device)
+        # Initialize neural network model based on architecture choice
+        model_type = config.get('model_type', 'mlp').lower()
+        print(f"\nInitializing model: {model_type}")
+        
+        if model_type == 'mlp':
+            self.model = MLP(
+                input_dim=3,
+                output_dim=1,
+                layers=config['nn_layers'], 
+                neurons=config['nn_neurons']
+            ).to(self.device)
+        elif model_type == 'transformer':
+            self.model = TransformerPINN(
+                input_dim=3,
+                output_dim=1,
+                d_model=config.get('d_model', 256),
+                nhead=config.get('nhead', 8),
+                num_layers=config.get('num_transformer_layers', 6),
+                dim_feedforward=config.get('dim_feedforward', 1024),
+                dropout=config.get('dropout', 0.1)
+            ).to(self.device)
+        elif model_type == 'hybrid_transformer':
+            self.model = HybridTransformerPINN(
+                input_dim=3,
+                output_dim=1,
+                d_model=config.get('d_model', 256),
+                nhead=config.get('nhead', 8),
+                num_transformer_layers=config.get('num_transformer_layers', 4),
+                num_mlp_layers=config.get('num_mlp_layers', 4),
+                mlp_neurons=config.get('mlp_neurons', 512),
+                dropout=config.get('dropout', 0.1)
+            ).to(self.device)
+        elif model_type == 'lightweight_transformer':
+            self.model = LightweightTransformerPINN(
+                input_dim=3,
+                output_dim=1,
+                d_model=config.get('d_model', 128),
+                nhead=config.get('nhead', 4),
+                num_layers=config.get('num_transformer_layers', 3),
+                dim_feedforward=config.get('dim_feedforward', 512),
+                dropout=config.get('dropout', 0.1)
+            ).to(self.device)
+        else:
+            raise ValueError(f"Unknown model_type: {model_type}. Choose from 'mlp', 'transformer', 'hybrid_transformer', 'lightweight_transformer'")
+        
+        # Print model statistics
+        total_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print(f"Model architecture: {model_type}")
+        print(f"Total trainable parameters: {total_params:,}")
         
         # Setup optimizer and learning rate scheduler
         self.optimizer = torch.optim.Adam(

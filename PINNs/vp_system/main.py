@@ -25,18 +25,35 @@ def main():
 
         # --- Physics Parameters ---
         'beam_v': 1.0,          # Beam velocity for two-stream instability
-        'thermal_v': 0.02,      # Thermal velocity spread
-        'perturb_amp': 0.05,    # Initial perturbation amplitude
+        'thermal_v': 0.5,       # Thermal velocity spread
+        'perturb_amp': 0.1,     # Initial perturbation amplitude
 
-        # --- Neural Network Architecture ---
-        'nn_layers': 12,        # Number of hidden layers
-        'nn_neurons': 256,      # Neurons per layer
+        # ============================================================
+        # MODEL ARCHITECTURE SELECTION
+        # ============================================================
+        # Options: 'mlp', 'transformer', 'hybrid_transformer', 'lightweight_transformer'
+        'model_type': 'mlp',
+        
+        # --- MLP Configuration (used when model_type='mlp') ---
+        'nn_layers': 8,         # Number of hidden layers
+        'nn_neurons': 128,      # Neurons per layer
+        
+        # --- Transformer Configuration (used when model_type contains 'transformer') ---
+        'd_model': 256,         # Transformer embedding dimension
+        'nhead': 8,             # Number of attention heads
+        'num_transformer_layers': 6,  # Number of transformer encoder layers
+        'dim_feedforward': 1024,      # Feedforward network dimension
+        'dropout': 0.1,         # Dropout rate
+        
+        # --- Hybrid Transformer Additional Config ---
+        'num_mlp_layers': 4,    # Number of MLP layers in hybrid model
+        'mlp_neurons': 512,     # Neurons per MLP layer in hybrid model
 
         # --- Training Hyperparameters ---
-        'epochs': 1000,         # Total training epochs
+        'epochs': 2000,         # Total training epochs
         'learning_rate': 1e-4,  # Initial learning rate (decays with scheduler)
         'n_pde': 70000,         # Number of collocation points for PDE
-        'n_ic': 700,            # Number of initial condition points
+        'n_ic': 1100,           # Number of initial condition points
         'n_bc': 1100,           # Number of boundary condition points
 
         # --- Loss Function Weights ---
@@ -47,9 +64,42 @@ def main():
         # --- Numerical & Logging Parameters ---
         'v_quad_points': 128,   # Quadrature points for velocity integration
         'log_frequency': 200,   # Log every N epochs
-        'plot_frequency': 200,  # Plot every N epochs
-        'plot_dir': 'results_normalized'  # Output directory
+        'plot_frequency': 400,  # Plot every N epochs
+        'plot_dir': '2025/10/13/2'  # Output directory
     }
+    
+    # ============================================================
+    # QUICK CONFIGURATION PRESETS (uncomment to use)
+    # ============================================================
+    
+    # # Preset 1: Standard MLP (default, fast training)
+    # configuration['model_type'] = 'mlp'
+    # configuration['nn_layers'] = 8
+    # configuration['nn_neurons'] = 128
+    
+    # # Preset 2: Large MLP (more capacity)
+    # configuration['model_type'] = 'mlp'
+    # configuration['nn_layers'] = 12
+    # configuration['nn_neurons'] = 256
+    
+    # # Preset 3: Standard Transformer (good for complex patterns)
+    # configuration['model_type'] = 'transformer'
+    # configuration['d_model'] = 256
+    # configuration['nhead'] = 8
+    # configuration['num_transformer_layers'] = 6
+    
+    # # Preset 4: Lightweight Transformer (faster, fewer parameters)
+    # configuration['model_type'] = 'lightweight_transformer'
+    # configuration['d_model'] = 128
+    # configuration['nhead'] = 4
+    # configuration['num_transformer_layers'] = 3
+    
+    # # Preset 5: Hybrid Model (combines both approaches)
+    # configuration['model_type'] = 'hybrid_transformer'
+    # configuration['d_model'] = 256
+    # configuration['nhead'] = 8
+    # configuration['num_transformer_layers'] = 4
+    # configuration['num_mlp_layers'] = 4
     
     # ==================== Print Configuration ====================
     print("=" * 70)
@@ -59,8 +109,21 @@ def main():
     print(f"  Domain: t ∈ [0, {configuration['t_max']}], "
           f"x ∈ [0, {configuration['x_max']}], "
           f"v ∈ [{-configuration['v_max']}, {configuration['v_max']}]")
-    print(f"  Network: {configuration['nn_layers']} layers × {configuration['nn_neurons']} neurons")
-    print(f"  Training: {configuration['epochs']} epochs, LR={configuration['learning_rate']}")
+    
+    # Print model-specific info
+    model_type = configuration.get('model_type', 'mlp')
+    print(f"\n  Model Type: {model_type.upper()}")
+    if model_type == 'mlp':
+        print(f"  Network: {configuration['nn_layers']} layers × {configuration['nn_neurons']} neurons")
+    elif 'transformer' in model_type:
+        print(f"  d_model: {configuration.get('d_model', 256)}, "
+              f"heads: {configuration.get('nhead', 8)}, "
+              f"layers: {configuration.get('num_transformer_layers', 6)}")
+        if model_type == 'hybrid_transformer':
+            print(f"  MLP branch: {configuration.get('num_mlp_layers', 4)} layers × "
+                  f"{configuration.get('mlp_neurons', 512)} neurons")
+    
+    print(f"\n  Training: {configuration['epochs']} epochs, LR={configuration['learning_rate']}")
     print(f"  Sampling: PDE={configuration['n_pde']}, IC={configuration['n_ic']}, BC={configuration['n_bc']}")
     print(f"  Loss weights: PDE={configuration['weight_pde']}, "
           f"IC={configuration['weight_ic']}, BC={configuration['weight_bc']}")
