@@ -18,6 +18,12 @@ def main():
     # Set random seeds for reproducibility
     torch.manual_seed(42)
     np.random.seed(42)
+
+    # Disable Flash / efficient SDPA kernels to ensure higher-order autograd support
+    if torch.backends.cuda.is_built():
+        torch.backends.cuda.enable_flash_sdp(False)
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+        torch.backends.cuda.enable_math_sdp(True)
     
     # ==================== Configuration ====================
     configuration = {
@@ -35,17 +41,17 @@ def main():
         # MODEL ARCHITECTURE SELECTION
         # ============================================================
         # Options: 'mlp', 'transformer', 'hybrid_transformer', 'lightweight_transformer'
-        'model_type': 'mlp',
+        'model_type': 'hybrid_transformer',
         
         # --- MLP Configuration (used when model_type='mlp') ---
         'nn_layers': 8,         # Number of hidden layers
         'nn_neurons': 128,      # Neurons per layer
         
         # --- Transformer Configuration (used when model_type contains 'transformer') ---
-        'd_model': 256,         # Transformer embedding dimension
-        'nhead': 8,             # Number of attention heads
-        'num_transformer_layers': 6,  # Number of transformer encoder layers
-        'dim_feedforward': 1024,      # Feedforward network dimension
+        'd_model': 128,         # Transformer embedding dimension
+        'nhead': 4,             # Number of attention heads
+        'num_transformer_layers': 4,  # Number of transformer encoder layers
+        'dim_feedforward': 512,       # Feedforward network dimension
         'dropout': 0.1,         # Dropout rate
         
         # --- Hybrid Transformer Additional Config ---
@@ -53,22 +59,22 @@ def main():
         'mlp_neurons': 512,     # Neurons per MLP layer in hybrid model
 
         # --- Training Hyperparameters ---
-        'epochs': 2000,         # Total training epochs
+        'epochs': 20000,         # Total training epochs
         'learning_rate': 1e-4,  # Initial learning rate (decays with scheduler)
-        'n_pde': 70000,         # Number of collocation points for PDE
-        'n_ic': 1100,           # Number of initial condition points
-        'n_bc': 1100,           # Number of boundary condition points
+        'n_pde': 16000,         # Number of collocation points for PDE
+        'n_ic': 1000,           # Number of initial condition points
+        'n_bc': 1000,           # Number of boundary condition points
 
         # --- Loss Function Weights ---
-        'weight_pde': 1.0,      # Weight for governing equations
-        'weight_ic': 5.0,       # Weight for initial condition
+        'weight_pde': 5.0,      # Weight for governing equations
+        'weight_ic': 3.0,       # Weight for initial condition
         'weight_bc': 10.0,      # Weight for boundary conditions
 
         # --- Numerical & Logging Parameters ---
-        'v_quad_points': 128,   # Quadrature points for velocity integration
+        'v_quad_points': 128,    # Quadrature points for velocity integration
         'log_frequency': 200,   # Log every N epochs
-        'plot_frequency': 400,  # Plot every N epochs
-        'plot_dir': '2025/10/13/2'  # Output directory
+        'plot_frequency': 2000,  # Plot every N epochs
+        'plot_dir': '2025/10/14/2'  # Output directory
     }
     
     # ============================================================
@@ -91,18 +97,18 @@ def main():
     # configuration['nhead'] = 8
     # configuration['num_transformer_layers'] = 6
     
-    # # Preset 4: Lightweight Transformer (faster, fewer parameters)
+    # # Preset 4: Lightweight Transformer (current default)
     # configuration['model_type'] = 'lightweight_transformer'
     # configuration['d_model'] = 128
     # configuration['nhead'] = 4
     # configuration['num_transformer_layers'] = 3
     
-    # # Preset 5: Hybrid Model (combines both approaches)
-    # configuration['model_type'] = 'hybrid_transformer'
-    # configuration['d_model'] = 256
-    # configuration['nhead'] = 8
-    # configuration['num_transformer_layers'] = 4
-    # configuration['num_mlp_layers'] = 4
+    # Preset 5: Hybrid Model (combines both approaches)
+    configuration['model_type'] = 'hybrid_transformer'
+    configuration['d_model'] = 256
+    configuration['nhead'] = 8
+    configuration['num_transformer_layers'] = 4
+    configuration['num_mlp_layers'] = 4
     
     # ==================== Print Configuration ====================
     print("=" * 70)
