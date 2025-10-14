@@ -318,11 +318,14 @@ class VlasovPoissonPINN:
         loss_bc = torch.mean(f_bc_vmin**2) + torch.mean(f_bc_vmax**2)
 
         # --- Total Loss ---
-        total_loss = (
-            self.config['weight_pde'] * loss_pde +
-            self.config['weight_ic'] * loss_ic +
-            self.config['weight_bc'] * loss_bc
-        )
+        # Weighted average of losses using user-specified weights
+        w_pde = self.config.get('weight_pde', 1.0)
+        w_ic = self.config.get('weight_ic', 1.0)
+        w_bc = self.config.get('weight_bc', 1.0)
+        sum_w = w_pde + w_ic + w_bc
+        if sum_w == 0:
+            raise ValueError("Sum of loss weights is zero; please provide positive weights.")
+        total_loss = (w_pde * loss_pde + w_ic * loss_ic + w_bc * loss_bc) / sum_w
         
         return total_loss, loss_pde, loss_ic, loss_bc
 
