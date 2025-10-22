@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/jack/Desktop/ML/AI4CFD/VP_system/TwoStreamInstability/main'
+relocations:     []
+...
