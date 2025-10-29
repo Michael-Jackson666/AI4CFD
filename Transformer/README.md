@@ -19,31 +19,86 @@ Transformers can be applied to PDEs in several ways:
 - **Graph Transformers**: Handle irregular geometries
 - **Vision Transformers (ViT)**: Treat PDE solutions as images
 
-## 📁 Files in this Directory
+## 📁 目录结构
 
-- `tutorial.ipynb` - Interactive Jupyter notebook tutorial
-- `train.py` - Complete training script for various PDE problems
-- `models.py` - Transformer architectures adapted for PDEs
-- `attention.py` - Custom attention mechanisms for physics problems
-
-## 🚀 Quick Start
-
-### Running the Tutorial
-```bash
-jupyter notebook tutorial.ipynb
+```
+Transformer/
+├── README.md                    # 本文件 - 技术文档
+├── models.py                    # Transformer模型实现
+├── totorial/                    # 📚 教程目录（从这里开始！）
+│   ├── QUICKSTART.md           # ⚡ 5分钟快速开始
+│   ├── README.md               # 📖 完整教程文档
+│   ├── transformer_tutorial.ipynb  # 🎓 交互式教程
+│   └── train_simple.py         # 🚀 简单训练脚本
+└── vp_system/                   # Vlasov-Poisson系统应用
 ```
 
-### Training a Model
+## 🚀 快速开始
+
+### 🎯 第一次使用？从这里开始！
+
+**5分钟快速入门**：
 ```bash
-python train.py --problem heat_equation --epochs 100 --lr 0.0001
+cd totorial/
+# 阅读快速开始指南
+cat QUICKSTART.md
+
+# 或直接运行
+python train_simple.py --epochs 50
 ```
 
-### Available Approaches
-- `spatial_transformer` - Process spatial fields
-- `temporal_transformer` - Model time evolution
-- `autoregressive` - Sequential prediction
-- `vision_transformer` - Image-based PDE solving
-- `graph_transformer` - Irregular geometries
+**完整交互式教程**：
+```bash
+cd totorial/
+jupyter notebook transformer_tutorial.ipynb
+```
+
+### 📖 学习路径
+
+```
+1. 快速开始 → totorial/QUICKSTART.md (5分钟)
+2. 交互式教程 → totorial/transformer_tutorial.ipynb (1-2小时)
+3. 完整文档 → totorial/README.md
+4. 高级应用 → 本README的后续章节
+```
+
+### 使用已有模型
+
+```python
+from models import SpatialTransformer, VisionTransformerPDE, TemporalTransformer
+
+# 空间Transformer
+model = SpatialTransformer(
+    input_dim=1, 
+    output_dim=1,
+    d_model=256,
+    nhead=8,
+    num_layers=6
+)
+
+# Vision Transformer
+vit_model = VisionTransformerPDE(
+    img_size=64,
+    patch_size=8,
+    embed_dim=384,
+    depth=6
+)
+
+# 时间演化Transformer
+temporal_model = TemporalTransformer(
+    field_dim=64*64,
+    d_model=512,
+    seq_len=10,
+    output_steps=3
+)
+```
+
+### 可用模型类型
+- `SpatialTransformer` - 处理空间场
+- `TemporalTransformer` - 时间演化建模
+- `VisionTransformerPDE` - 图像式PDE求解
+- `PDETransformer` - 通用序列到序列
+- `PhysicsInformedTransformer` - 物理约束Transformer
 
 ## 📊 Applications
 
