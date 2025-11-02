@@ -5,9 +5,9 @@ Modify this file to change training parameters without touching the main script.
 
 # ==================== Domain Parameters ====================
 DOMAIN = {
-    't_max': 62.5,          # Maximum time (in units of ω_p^-1)
-    'x_max': 10.0,          # Spatial domain length
-    'v_max': 5.0,           # Maximum velocity
+    't_max': 40.0,          # Maximum time (paper shows t=0,20,30,40)
+    'x_max': 31.416,        # 2π/0.2 ≈ 31.416 (one wavelength based on ω=0.2)
+    'v_max': 6.0,           # Maximum velocity (v_0=2.4, need some margin)
 }
 
 # ==================== Physics Parameters ====================
@@ -20,6 +20,7 @@ PHYSICS = {
 # ==================== Initial Condition Configuration ====================
 # Available initial condition types:
 # - 'two_stream': Two-stream instability (symmetric double Maxwellian)
+# - 'two_stream_paper': Two-stream from paper eq (6.7) with small perturbation
 # - 'landau': Landau damping (single Maxwellian with perturbation)
 # - 'single_beam': Single beam (one Maxwellian)
 # - 'custom': Custom initial condition (define your own in CUSTOM_IC)
@@ -27,11 +28,16 @@ PHYSICS = {
 INITIAL_CONDITION = {
     'type': 'two_stream',       # Initial condition type
     
-    # Parameters for 'two_stream' mode
+    # Parameters for 'two_stream' mode (standard)
     'beam_v': 1.0,              # Beam velocity (±v_b)
     'thermal_v': 0.5,           # Thermal velocity spread
     'perturb_amp': 0.1,         # Perturbation amplitude (0-1)
     'perturb_mode': 1,          # Perturbation wave number k = 2π*mode/x_max
+    
+    # Parameters for 'two_stream_paper' mode (paper eq 6.7)
+    'paper_v0': 2.4,            # Beam velocity v_0 from paper
+    'paper_alpha': 0.003,       # Perturbation amplitude α from paper
+    'paper_omega': 0.2,         # Wave number ω from paper
     
     # Parameters for 'landau' mode
     'landau_v_thermal': 1.0,    # Thermal velocity for Landau damping
@@ -81,7 +87,7 @@ HYBRID_CONFIG = {
 
 # ==================== Training Hyperparameters ====================
 TRAINING = {
-    'epochs': 20000,         # Total training epochs
+    'epochs': 10000,         # Total training epochs
     'learning_rate': 1e-4,   # Initial learning rate (decays with scheduler)
     'n_pde': 16000,          # Number of collocation points for PDE
     'n_ic': 1000,            # Number of initial condition points
@@ -101,8 +107,8 @@ NUMERICAL = {
 }
 
 LOGGING = {
-    'log_frequency': 200,    # Log every N epochs
-    'plot_frequency': 2000,  # Plot every N epochs
+    'log_frequency': 50,    # Log every N epochs
+    'plot_frequency': 1000,  # Plot every N epochs
     'plot_dir': '2025/11/02/1'  # Output directory
 }
 
@@ -150,6 +156,12 @@ def use_ic_preset(preset_name):
         INITIAL_CONDITION['single_v_thermal'] = 0.5
         INITIAL_CONDITION['single_perturb_amp'] = 0.1
         INITIAL_CONDITION['single_mode'] = 1
+        
+    elif preset_name == 'two_stream_paper':
+        INITIAL_CONDITION['type'] = 'two_stream_paper'
+        INITIAL_CONDITION['paper_v0'] = 2.4
+        INITIAL_CONDITION['paper_alpha'] = 0.003
+        INITIAL_CONDITION['paper_omega'] = 0.2
         
     else:
         raise ValueError(f"Unknown IC preset: {preset_name}")
@@ -213,6 +225,7 @@ def use_preset(preset_name):
 # --- Initial Condition Presets ---
 # use_ic_preset('two_stream_strong')
 # use_ic_preset('two_stream_weak')
+# use_ic_preset('two_stream_paper')    # Paper equation (6.7)
 # use_ic_preset('landau_damping')
 # use_ic_preset('single_beam')
 
@@ -267,7 +280,7 @@ def validate_configuration():
         errors.append("v_max must be positive")
     
     # Check initial condition type
-    valid_ic_types = ['two_stream', 'landau', 'single_beam', 'custom']
+    valid_ic_types = ['two_stream', 'two_stream_paper', 'landau', 'single_beam', 'custom']
     if INITIAL_CONDITION['type'] not in valid_ic_types:
         errors.append(f"Initial condition type must be one of {valid_ic_types}")
     
