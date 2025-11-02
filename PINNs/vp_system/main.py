@@ -1,6 +1,6 @@
 """
 Main script for training the PINN on the Vlasov-Poisson system.
-Configures hyperparameters and runs the training loop.
+All configuration parameters are in config.py - modify that file to change settings.
 """
 
 import torch
@@ -9,11 +9,13 @@ import json
 import os
 from datetime import datetime
 from vp_pinn import VlasovPoissonPINN
+from config import get_configuration, validate_configuration
 
 
 def main():
     """
-    Main function to configure and run the PINN training.
+    Main function to run the PINN training.
+    Configuration is loaded from config.py.
     """
     # Set random seeds for reproducibility
     torch.manual_seed(42)
@@ -25,93 +27,27 @@ def main():
         torch.backends.cuda.enable_mem_efficient_sdp(False)
         torch.backends.cuda.enable_math_sdp(True)
     
-    # ==================== Configuration ====================
-    configuration = {
-        # --- Domain Parameters ---
-        't_max': 62.5,          # Maximum time (in units of ω_p^-1)
-        'x_max': 10.0,          # Spatial domain length
-        'v_max': 5.0,           # Maximum velocity
-
-        # --- Physics Parameters ---
-        'beam_v': 1.0,          # Beam velocity for two-stream instability
-        'thermal_v': 0.5,       # Thermal velocity spread
-        'perturb_amp': 0.1,     # Initial perturbation amplitude
-
-        # ============================================================
-        # MODEL ARCHITECTURE SELECTION
-        # ============================================================
-        # Options: 'mlp', 'transformer', 'hybrid_transformer', 'lightweight_transformer'
-        'model_type': 'hybrid_transformer',
+    # ==================== Load Configuration ====================
+    print("=" * 70)
+    print("LOADING CONFIGURATION FROM config.py")
+    print("=" * 70)
+    
+    try:
+        # Validate configuration
+        validate_configuration()
         
-        # --- MLP Configuration (used when model_type='mlp') ---
-        'nn_layers': 8,         # Number of hidden layers
-        'nn_neurons': 128,      # Neurons per layer
+        # Get configuration dictionary
+        configuration = get_configuration()
         
-        # --- Transformer Configuration (used when model_type contains 'transformer') ---
-        'd_model': 128,         # Transformer embedding dimension
-        'nhead': 4,             # Number of attention heads
-        'num_transformer_layers': 4,  # Number of transformer encoder layers
-        'dim_feedforward': 512,       # Feedforward network dimension
-        'dropout': 0.1,         # Dropout rate
+        print("✓ Configuration loaded and validated successfully!")
         
-        # --- Hybrid Transformer Additional Config ---
-        'num_mlp_layers': 4,    # Number of MLP layers in hybrid model
-        'mlp_neurons': 512,     # Neurons per MLP layer in hybrid model
-
-        # --- Training Hyperparameters ---
-        'epochs': 20000,         # Total training epochs
-        'learning_rate': 1e-4,  # Initial learning rate (decays with scheduler)
-        'n_pde': 16000,         # Number of collocation points for PDE
-        'n_ic': 1000,           # Number of initial condition points
-        'n_bc': 1000,           # Number of boundary condition points
-
-        # --- Loss Function Weights ---
-        'weight_pde': 5.0,      # Weight for governing equations
-        'weight_ic': 3.0,       # Weight for initial condition
-        'weight_bc': 10.0,      # Weight for boundary conditions
-
-        # --- Numerical & Logging Parameters ---
-        'v_quad_points': 128,    # Quadrature points for velocity integration
-        'log_frequency': 200,   # Log every N epochs
-        'plot_frequency': 2000,  # Plot every N epochs
-        'plot_dir': '2025/10/14/2'  # Output directory
-    }
-    
-    # ============================================================
-    # QUICK CONFIGURATION PRESETS (uncomment to use)
-    # ============================================================
-    
-    # # Preset 1: Standard MLP (default, fast training)
-    # configuration['model_type'] = 'mlp'
-    # configuration['nn_layers'] = 8
-    # configuration['nn_neurons'] = 128
-    
-    # # Preset 2: Large MLP (more capacity)
-    # configuration['model_type'] = 'mlp'
-    # configuration['nn_layers'] = 12
-    # configuration['nn_neurons'] = 256
-    
-    # # Preset 3: Standard Transformer (good for complex patterns)
-    # configuration['model_type'] = 'transformer'
-    # configuration['d_model'] = 256
-    # configuration['nhead'] = 8
-    # configuration['num_transformer_layers'] = 6
-    
-    # # Preset 4: Lightweight Transformer (current default)
-    # configuration['model_type'] = 'lightweight_transformer'
-    # configuration['d_model'] = 128
-    # configuration['nhead'] = 4
-    # configuration['num_transformer_layers'] = 3
-    
-    # Preset 5: Hybrid Model (combines both approaches)
-    configuration['model_type'] = 'hybrid_transformer'
-    configuration['d_model'] = 256
-    configuration['nhead'] = 8
-    configuration['num_transformer_layers'] = 4
-    configuration['num_mlp_layers'] = 4
+    except Exception as e:
+        print(f"✗ Error loading configuration: {e}")
+        print("\nPlease check config.py and fix any errors.")
+        return
     
     # ==================== Print Configuration ====================
-    print("=" * 70)
+    print("\n" + "=" * 70)
     print("VLASOV-POISSON PINN TRAINING")
     print("=" * 70)
     print("\nConfiguration:")
