@@ -344,39 +344,48 @@ class VlasovPoissonPINN:
         df_dx = df_dx_norm / self.x_scale
         df_dv = df_dv_norm / self.v_scale
         
-        # Compute electric field on a spatial grid
-        x_grid_E = torch.linspace(0, self.config['x_max'], 101, device=self.device).unsqueeze(1).requires_grad_()
-        t_mean_E = torch.full_like(x_grid_E, t.mean().item())
-        n_e_on_grid = self._compute_ne(t_mean_E, x_grid_E)
+        # Compute electric field on a spatial grid for each collocation time
+        n_pde = t.shape[0]
+        num_x_points = 101
+        x_grid_template = torch.linspace(0, self.config['x_max'], num_x_points, device=self.device)
+        x_grid_E = x_grid_template.unsqueeze(0).repeat(n_pde, 1).unsqueeze(-1)
+        x_grid_E = x_grid_E.clone().detach().requires_grad_(True)
+        t_grid_E = t.expand(-1, num_x_points).unsqueeze(-1)
+
+        n_e_on_grid = self._compute_ne(
+            t_grid_E.reshape(-1, 1),
+            x_grid_E.reshape(-1, 1)
+        ).reshape(n_pde, num_x_points, 1)
         charge_dev_on_grid = n_e_on_grid - 1.0
-        
-        # Integrate charge deviation to get electric field: dE/dx = n_e - 1
-        dx_E = x_grid_E[1] - x_grid_E[0]
-        E_on_grid = torch.cumsum(charge_dev_on_grid, dim=0) * dx_E
-        E_on_grid = E_on_grid - torch.mean(E_on_grid)  # Remove mean for periodic BC
-        
-        # Interpolate E to sample points
+
+        dx_E = x_grid_template[1] - x_grid_template[0]
+        E_on_grid = torch.cumsum(charge_dev_on_grid, dim=1) * dx_E
+        E_on_grid = E_on_grid - torch.mean(E_on_grid, dim=1, keepdim=True)
+
+        # Interpolate E to the collocation points
         x_flat = x.flatten()
-        x_grid_flat = x_grid_E.flatten()
-        E_grid_flat = E_on_grid.flatten()
-        
-        # Linear interpolation
-        indices = torch.searchsorted(x_grid_flat.detach(), x_flat.detach())
-        indices = torch.clamp(indices, 1, len(x_grid_flat) - 1)
-        
-        x0 = x_grid_flat[indices - 1]
-        x1 = x_grid_flat[indices]
-        y0 = E_grid_flat[indices - 1]
-        y1 = E_grid_flat[indices]
-        
+        indices = torch.searchsorted(x_grid_template.detach(), x_flat.detach())
+        indices = torch.clamp(indices, 1, num_x_points - 1)
+        batch_indices = torch.arange(n_pde, device=self.device)
+
+        x0 = x_grid_template[indices - 1]
+        x1 = x_grid_template[indices]
+        y0 = E_on_grid[batch_indices, indices - 1, 0]
+        y1 = E_on_grid[batch_indices, indices, 0]
+
         E = y0 + (x_flat - x0) * (y1 - y0) / (x1 - x0 + 1e-10)
         E = E.unsqueeze(1)
-        
+
         # Vlasov residual: df/dt + v*df/dx - E*df/dv = 0
         vlasov_residual = df_dt + v * df_dx - E * df_dv
-        
+
         # Poisson residual: dE/dx - (n_e - 1) = 0
-        dE_dx_on_grid = torch.autograd.grad(E_on_grid, x_grid_E, torch.ones_like(E_on_grid), create_graph=True)[0]
+        dE_dx_on_grid = torch.autograd.grad(
+            E_on_grid,
+            x_grid_E,
+            grad_outputs=torch.ones_like(E_on_grid),
+            create_graph=True
+        )[0]
         poisson_residual_on_grid = dE_dx_on_grid - charge_dev_on_grid
 
         return vlasov_residual, poisson_residual_on_grid
