@@ -109,7 +109,7 @@ NUMERICAL = {
 LOGGING = {
     'log_frequency': 50,    # Log every N epochs
     'plot_frequency': 1000,  # Plot every N epochs
-    'plot_dir': '2025/11/02/1'  # Output directory
+    'plot_dir': '2025/11/02/2'  # Output directory
 }
 
 
