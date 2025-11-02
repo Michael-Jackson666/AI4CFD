@@ -148,8 +148,8 @@ class VlasovPoissonPINN:
 
     def _initial_condition(self, x, v):
         """
-        Initial condition: perturbed double Maxwellian distribution.
-        Represents two counter-streaming electron beams.
+        Initial condition dispatcher based on configuration.
+        Supports multiple initial condition types for easy experimentation.
         
         Args:
             x (torch.Tensor): Spatial coordinates
@@ -158,15 +158,94 @@ class VlasovPoissonPINN:
         Returns:
             torch.Tensor: Initial distribution function f(0, x, v)
         """
-        k = 2 * torch.pi / self.config['x_max']
-        norm_factor = 1.0 / (self.config['thermal_v'] * torch.sqrt(torch.tensor(2 * torch.pi)))
+        ic_type = self.config.get('type', 'two_stream')
+        
+        if ic_type == 'two_stream':
+            return self._ic_two_stream(x, v)
+        elif ic_type == 'landau':
+            return self._ic_landau(x, v)
+        elif ic_type == 'single_beam':
+            return self._ic_single_beam(x, v)
+        elif ic_type == 'custom':
+            custom_func = self.config.get('custom_ic_function')
+            if custom_func is None:
+                raise ValueError("Custom IC function not provided in config!")
+            return custom_func(x, v, self.config)
+        else:
+            raise ValueError(f"Unknown initial condition type: {ic_type}")
+    
+    def _ic_two_stream(self, x, v):
+        """
+        Two-stream instability initial condition.
+        Two counter-streaming electron beams with spatial perturbation.
+        
+        Args:
+            x (torch.Tensor): Spatial coordinates
+            v (torch.Tensor): Velocity coordinates
+            
+        Returns:
+            torch.Tensor: f(0, x, v) = 0.5 * [M(v-v_b) + M(v+v_b)] * [1 + α*cos(kx)]
+        """
+        k = 2 * torch.pi * self.config.get('perturb_mode', 1) / self.config['x_max']
+        v_th = self.config.get('thermal_v', 0.5)
+        v_b = self.config.get('beam_v', 1.0)
+        alpha = self.config.get('perturb_amp', 0.1)
+        
+        norm_factor = 1.0 / (v_th * torch.sqrt(torch.tensor(2 * torch.pi)))
         
         # Two Gaussian beams moving in opposite directions
-        term1 = norm_factor * torch.exp(-((v - self.config['beam_v'])**2) / (2 * self.config['thermal_v']**2))
-        term2 = norm_factor * torch.exp(-((v + self.config['beam_v'])**2) / (2 * self.config['thermal_v']**2))
+        term1 = norm_factor * torch.exp(-((v - v_b)**2) / (2 * v_th**2))
+        term2 = norm_factor * torch.exp(-((v + v_b)**2) / (2 * v_th**2))
         
-        # Add spatial perturbation to trigger instability
-        return 0.5 * (term1 + term2) * (1 + self.config['perturb_amp'] * torch.cos(k * x))
+        # Add spatial perturbation
+        return 0.5 * (term1 + term2) * (1 + alpha * torch.cos(k * x))
+    
+    def _ic_landau(self, x, v):
+        """
+        Landau damping initial condition.
+        Single Maxwellian with small spatial perturbation.
+        
+        Args:
+            x (torch.Tensor): Spatial coordinates
+            v (torch.Tensor): Velocity coordinates
+            
+        Returns:
+            torch.Tensor: f(0, x, v) = M(v) * [1 + α*cos(kx)]
+        """
+        k = 2 * torch.pi * self.config.get('landau_mode', 1) / self.config['x_max']
+        v_th = self.config.get('landau_v_thermal', 1.0)
+        alpha = self.config.get('landau_perturb_amp', 0.01)
+        
+        # Single Maxwellian centered at v=0
+        norm_factor = 1.0 / (v_th * torch.sqrt(torch.tensor(2 * torch.pi)))
+        maxwell = norm_factor * torch.exp(-(v**2) / (2 * v_th**2))
+        
+        # Small spatial perturbation for Landau damping
+        return maxwell * (1 + alpha * torch.cos(k * x))
+    
+    def _ic_single_beam(self, x, v):
+        """
+        Single beam initial condition.
+        One Maxwellian beam with spatial perturbation.
+        
+        Args:
+            x (torch.Tensor): Spatial coordinates
+            v (torch.Tensor): Velocity coordinates
+            
+        Returns:
+            torch.Tensor: f(0, x, v) = M(v-v_c) * [1 + α*cos(kx)]
+        """
+        k = 2 * torch.pi * self.config.get('single_mode', 1) / self.config['x_max']
+        v_c = self.config.get('single_v_center', 0.0)
+        v_th = self.config.get('single_v_thermal', 0.5)
+        alpha = self.config.get('single_perturb_amp', 0.05)
+        
+        # Single Maxwellian beam
+        norm_factor = 1.0 / (v_th * torch.sqrt(torch.tensor(2 * torch.pi)))
+        maxwell = norm_factor * torch.exp(-((v - v_c)**2) / (2 * v_th**2))
+        
+        # Add spatial perturbation
+        return maxwell * (1 + alpha * torch.cos(k * x))
 
     def _compute_ne(self, t, x):
         """
