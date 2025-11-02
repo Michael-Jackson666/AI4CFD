@@ -162,6 +162,8 @@ class VlasovPoissonPINN:
         
         if ic_type == 'two_stream':
             return self._ic_two_stream(x, v)
+        elif ic_type == 'two_stream_paper':
+            return self._ic_two_stream_paper(x, v)
         elif ic_type == 'landau':
             return self._ic_landau(x, v)
         elif ic_type == 'single_beam':
@@ -246,6 +248,42 @@ class VlasovPoissonPINN:
         
         # Add spatial perturbation
         return maxwell * (1 + alpha * torch.cos(k * x))
+    
+    def _ic_two_stream_paper(self, x, v):
+        """
+        Two-stream instability from paper equation (6.7).
+        Based on 2D2V setting but simplified to 1D1V.
+        
+        Paper formula:
+        f_0(x,v) = (1/(4π)) * (1 + α*cos(ω·x)) * [exp(-(v-v_0)²/2) + exp(-(v+v_0)²/2)]
+        
+        Args:
+            x (torch.Tensor): Spatial coordinates
+            v (torch.Tensor): Velocity coordinates
+            
+        Returns:
+            torch.Tensor: f(0, x, v) following paper equation (6.7)
+        """
+        v0 = self.config.get('paper_v0', 2.4)           # v_0 = 2.4 from paper
+        alpha = self.config.get('paper_alpha', 0.003)   # α = 0.003 from paper
+        omega = self.config.get('paper_omega', 0.2)     # ω = 0.2 from paper
+        
+        # Normalization factor: 1/(4π) in paper, but we need proper normalization
+        # In 1D velocity space, ∫exp(-v²/2)dv = √(2π), so for two beams: 2√(2π)
+        # To normalize: 1/(2√(2π))
+        norm_factor = 1.0 / (2.0 * torch.sqrt(torch.tensor(2.0 * torch.pi)))
+        
+        # Two Gaussian beams at v = ±v_0 with unit variance (σ² = 1)
+        term1 = torch.exp(-((v - v0)**2) / 2.0)
+        term2 = torch.exp(-((v + v0)**2) / 2.0)
+        
+        # Spatial perturbation: (1 + α*cos(ω*x))
+        spatial_factor = 1.0 + alpha * torch.cos(omega * x)
+        
+        # Complete distribution function
+        f = norm_factor * (term1 + term2) * spatial_factor
+        
+        return f
 
     def _compute_ne(self, t, x):
         """
