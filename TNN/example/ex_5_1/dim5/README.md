@@ -19,14 +19,18 @@ $$
 其中右端项为：
 
 $$
+\begin{aligned}
 f(x_1, x_2, x_3, x_4, x_5) = \sum_{k=1}^{5} \sin(2\pi x_k) \prod_{i \neq k} \sin(\pi x_i)
+\end{aligned}
 $$
 
 ### 边界条件 (Boundary Conditions)
 
 使用强制边界条件：
 $$
+\begin{aligned}
 u(x_1, \ldots, x_5) = \prod_{k=1}^{5} \sin(\pi x_k) \cdot \text{NN}(x_1, \ldots, x_5)
+\end{aligned}
 $$
 
 这保证了 $u$ 在边界 $\partial[-1,1]^5$ 上自动为零。
