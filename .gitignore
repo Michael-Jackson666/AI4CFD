@@ -25,9 +25,10 @@ MANIFEST
 .ipynb_checkpoints
 
 # PyTorch
-# *.pth
-# *.pt
-# *.ckpt
+*.pth
+*.pt
+*.ckpt
+*.pkl
 
 # TensorFlow
 *.h5
@@ -61,10 +62,11 @@ Thumbs.db
 *.npz
 data/
 datasets/
-# logs/
-# runs/
+logs/
+runs/
 # results/
-# checkpoints/
+checkpoints/
+model/
 
 # Temporary files
 *.tmp
