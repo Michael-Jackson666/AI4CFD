@@ -63,8 +63,8 @@ data/
 datasets/
 logs/
 runs/
-results/
-checkpoints/
+# results/
+# checkpoints/
 
 # Temporary files
 *.tmp
