@@ -8,14 +8,15 @@ from tnn import *
 
 import os
 import time
+import numpy as np
 
 pi = 3.14159265358979323846
 
 # ********** choose data type and device **********
 dtype = torch.double
 # dtype = torch.float
-device = 'cpu'
-# device = 'cuda'
+# device = 'cpu'
+device = 'cuda'
 
 
 # ********** generate data points **********
