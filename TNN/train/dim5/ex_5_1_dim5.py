@@ -126,8 +126,8 @@ def post_process(model, w, x):
 # ********** training process **********
 # parameters
 lr = 0.003
-epochs = 50000
-print_every = 100
+epochs = 500
+print_every = 10
 save = False
 # optimizer used
 optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -135,6 +135,7 @@ optimizer = optim.Adam(model.parameters(), lr=lr)
 # Store loss history for plotting
 loss_history_adam = []
 epoch_history_adam = []
+loss_history_lbfgs = []
 
 starttime = time.time()
 # training
@@ -184,8 +185,8 @@ print('*'*20,'LBFGS','*'*20)
 # ********** training process LBFGS **********
 # parameters
 lr = 1
-epochs = 10000
-print_every = 100
+epochs = 100
+print_every = 10
 save = True
 # optimizer used
 optimizer = torch.optim.LBFGS(model.parameters(), lr=lr)
@@ -197,6 +198,7 @@ for e in range(epochs):
         loss.backward()
         return loss
     loss = optimizer.step(closure)
+    loss_history_lbfgs.append(loss.item())
     # initial info
     if e == 0:
         print('*'*40)
@@ -214,87 +216,23 @@ for e in range(epochs):
         post_process(model, w, x)
 
 
-# ********** Visualization: 2D slices **********
+# ********** Loss Visualization **********
 print('*'*40)
-print('Generating 2D slice visualizations...')
+print('Plotting loss history...')
 
-# Fix dimensions 3, 4, 5 at 0, visualize dimensions 1 and 2
-n_plot = 50
-x1 = torch.linspace(a, b, n_plot, dtype=dtype, device=device)
-x2 = torch.linspace(a, b, n_plot, dtype=dtype, device=device)
-X1, X2 = torch.meshgrid(x1, x2, indexing='ij')
-
-# Create 5D points with fixed values for dims 3,4,5
-X_plot = torch.zeros(n_plot**2, dim, dtype=dtype, device=device)
-X_plot[:, 0] = X1.flatten()
-X_plot[:, 1] = X2.flatten()
-X_plot[:, 2] = 0.0  # Fixed at 0
-X_plot[:, 3] = 0.0  # Fixed at 0
-X_plot[:, 4] = 0.0  # Fixed at 0
-
-# Compute solution and exact solution
-with torch.no_grad():
-    phi, grad_phi = model(w, x, need_grad=1)
-    alpha = torch.ones(p, device=device, dtype=dtype)
-    
-    part1 = Int2TNN_amend_1d(w, w, alpha, phi, alpha, phi, grad_phi, grad_phi, if_sum=False)
-    part2 = Int2TNN(w, alpha, phi, alpha_F, F, if_sum=False)
-    part2 = torch.sum(part2, dim=-1)
-    A = part1
-    B = (dim+3)*np.pi**2*part2
-    C = torch.linalg.solve(A, B)
-    
-    # Evaluate on plot points
-    phi_plot, _ = model(w, X_plot, need_grad=1)
-    u_pred = torch.zeros(n_plot**2, dtype=dtype, device=device)
-    for i in range(p):
-        prod = torch.ones(n_plot**2, dtype=dtype, device=device)
-        for d in range(dim):
-            prod = prod * phi_plot[d, i, :]
-        u_pred = u_pred + C[i] * prod
-    
-    # Exact solution at slice
-    u_exact = torch.zeros(n_plot**2, dtype=dtype, device=device)
-    for i in range(dim):
-        term = torch.sin(2*pi*X_plot[:, i]) if i < 2 else torch.sin(pi*X_plot[:, i])
-        for j in range(dim):
-            if j != i:
-                term = term * torch.sin(pi*X_plot[:, j])
-        u_exact = u_exact + term
-
-u_pred = u_pred.reshape(n_plot, n_plot).cpu().numpy()
-u_exact = u_exact.reshape(n_plot, n_plot).cpu().numpy()
-X1_cpu = X1.cpu().numpy()
-X2_cpu = X2.cpu().numpy()
-
-# Plot
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-
-# Predicted solution
-im0 = axes[0].contourf(X1_cpu, X2_cpu, u_pred, levels=20, cmap='RdBu_r')
-axes[0].set_title('TNN Prediction (x3=x4=x5=0)', fontsize=14)
-axes[0].set_xlabel('$x_1$', fontsize=12)
-axes[0].set_ylabel('$x_2$', fontsize=12)
-plt.colorbar(im0, ax=axes[0])
-
-# Exact solution
-im1 = axes[1].contourf(X1_cpu, X2_cpu, u_exact, levels=20, cmap='RdBu_r')
-axes[1].set_title('Exact Solution (x3=x4=x5=0)', fontsize=14)
-axes[1].set_xlabel('$x_1$', fontsize=12)
-axes[1].set_ylabel('$x_2$', fontsize=12)
-plt.colorbar(im1, ax=axes[1])
-
-# Error
-error = np.abs(u_pred - u_exact)
-im2 = axes[2].contourf(X1_cpu, X2_cpu, error, levels=20, cmap='hot')
-axes[2].set_title('Absolute Error', fontsize=14)
-axes[2].set_xlabel('$x_1$', fontsize=12)
-axes[2].set_ylabel('$x_2$', fontsize=12)
-plt.colorbar(im2, ax=axes[2])
-
+plt.figure(figsize=(8, 5))
+if loss_history_adam:
+    plt.plot(epoch_history_adam, loss_history_adam, label='Adam', color='tab:blue')
+if loss_history_lbfgs:
+    lbfgs_epochs = list(range(len(loss_history_lbfgs)))
+    plt.plot(lbfgs_epochs, loss_history_lbfgs, label='LBFGS', color='tab:orange')
+plt.yscale('log')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training Loss History')
+plt.legend()
+plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('solution_2d_slice.png', dpi=150, bbox_inches='tight')
-print('Saved: solution_2d_slice.png')
-plt.show()
-
-print('Visualization complete!')
+plt.savefig('loss_history.png', dpi=150, bbox_inches='tight')
+print('Saved: loss_history.png')
+plt.close()
