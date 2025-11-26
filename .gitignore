@@ -68,6 +68,18 @@ runs/
 checkpoints/
 model/
 
+# Images - ignore all except in TNN/train
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+# But allow images in TNN/train directory
+!TNN/train/**/*.png
+!TNN/train/**/*.jpg
+!TNN/train/**/*.jpeg
+
 # Temporary files
 *.tmp
 *.temp
