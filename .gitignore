@@ -25,9 +25,9 @@ MANIFEST
 .ipynb_checkpoints
 
 # PyTorch
-*.pth
-*.pt
-*.ckpt
+# *.pth
+# *.pt
+# *.ckpt
 
 # TensorFlow
 *.h5
