@@ -220,19 +220,31 @@ for e in range(epochs):
 print('*'*40)
 print('Plotting loss history...')
 
-plt.figure(figsize=(8, 5))
+plt.figure(figsize=(10, 5))
+
+# Combine Adam and LBFGS losses into one continuous curve
+adam_epochs = len(loss_history_adam)
+total_epochs = adam_epochs + len(loss_history_lbfgs)
+
+# Plot Adam phase
 if loss_history_adam:
-    plt.plot(epoch_history_adam, loss_history_adam, label='Adam', color='tab:blue')
+    plt.plot(range(adam_epochs), loss_history_adam, label='Adam', color='tab:blue', linewidth=1.5)
+
+# Plot LBFGS phase (continue from where Adam ended)
 if loss_history_lbfgs:
-    lbfgs_epochs = list(range(len(loss_history_lbfgs)))
-    plt.plot(lbfgs_epochs, loss_history_lbfgs, label='LBFGS', color='tab:orange')
+    lbfgs_epochs = range(adam_epochs, total_epochs)
+    plt.plot(lbfgs_epochs, loss_history_lbfgs, label='L-BFGS', color='tab:orange', linewidth=1.5)
+    
+    # Add a vertical line to mark the transition
+    plt.axvline(x=adam_epochs, color='red', linestyle='--', linewidth=1, alpha=0.7, label='Optimizer Switch')
+
 plt.yscale('log')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.title('Training Loss History')
-plt.legend()
+plt.xlabel('Epoch', fontsize=12)
+plt.ylabel('Loss (log scale)', fontsize=12)
+plt.title('Training Loss History: Adam + L-BFGS', fontsize=14)
+plt.legend(fontsize=10)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig('loss_history.png', dpi=150, bbox_inches='tight')
 print('Saved: loss_history.png')
-plt.close()
+plt.show()
