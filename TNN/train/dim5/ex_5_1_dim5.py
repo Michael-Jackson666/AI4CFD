@@ -126,8 +126,8 @@ def post_process(model, w, x):
 # ********** training process **********
 # parameters
 lr = 0.003
-epochs = 500
-print_every = 10
+epochs = 50000
+print_every = 100
 save = False
 # optimizer used
 optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -185,8 +185,8 @@ print('*'*20,'LBFGS','*'*20)
 # ********** training process LBFGS **********
 # parameters
 lr = 1
-epochs = 100
-print_every = 10
+epochs = 10000
+print_every = 100
 save = True
 # optimizer used
 optimizer = torch.optim.LBFGS(model.parameters(), lr=lr)
