@@ -33,6 +33,39 @@ u(x_1, \ldots, x_5) \approx \sum_{i=1}^{50} \alpha_i \prod_{k=1}^{5} \phi_k^{(i)
 边界条件: 乘以 sin(πx) 强制边界为零
 ```
 
+## 用 TNN 求解 PDE 的步骤
+
+1. **定义能量泛函**  
+  利用五维 Poisson 方程的变分形式，将问题转化为最小化能量
+   
+  ```math
+  \mathcal{E}(u) = \frac{1}{2} \int_{\Omega} |\nabla u|^2 \, dx - \int_{\Omega} f(x) u(x) \, dx
+  ```
+
+2. **构造张量分解近似**  
+  通过分离变量得到系数向量 \( C \) 与一维基函数的乘积形式
+   
+  ```math
+  u_C(x) = \sum_{i=1}^{p} C_i \prod_{k=1}^{5} \phi_k^{(i)}(x_k)
+  ```
+
+3. **数值积分与刚度矩阵**  
+  使用 `quadrature.py` 中的高斯-勒让德积分在一维上计算所有需要的
+  \(L^2\) 与 \(H^1\) 积分，再通过张量积组合得到高维积分，组装线性系统
+   
+  ```math
+  A(C) = \int_\Omega \nabla u_C \cdot \nabla \phi_j \, dx,
+  \qquad B = \int_\Omega f \phi_j \, dx
+  ```
+
+4. **最小化能量**  
+  通过 Adam 与 L-BFGS 对 TNN 参数求解，使得 \( A C = B \) 成立并最小化
+  \( \mathcal{E}(u_C) \)。梯度由 `TNN.forward(..., need_grad=2)` 自动计算，确保二阶导数可用于能量项。
+
+5. **误差评估与可视化**  
+  训练结束后调用 `error0_estimate` 与 `error1_estimate` 评估 \(L^2\) 与 \(H^1\)
+  误差，并在固定三个坐标切片上绘制 TNN 预测与精确解。
+
 
 ## 代码文件说明
 
