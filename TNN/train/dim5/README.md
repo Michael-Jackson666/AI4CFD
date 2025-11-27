@@ -4,29 +4,29 @@
 
 求解五维 Poisson 方程：
 
-```math
+$$
 -\Delta u = f \quad \text{in } \Omega = [-1,1]^5, \quad u = 0 \quad \text{on } \partial\Omega
-```
+$$
 
 右端项定义为：
 
-```math
+$$
 f(x_1, x_2, x_3, x_4, x_5) = \sum_{k=1}^{5} \sin(2\pi x_k) \prod_{i \neq k} \sin(\pi x_i)
-```
+$$
 
 ## TNN 核心思想
 
 使用**张量分解**克服维数灾难，将高维函数表示为低维函数的乘积和：
 
-```math
+$$
 u(x_1, \ldots, x_5) \approx \sum_{i=1}^{50} \alpha_i \prod_{k=1}^{5} \phi_k^{(i)}(x_k)
-```
+$$
 
 **参数量对比**：
-- 传统网格方法：O(N<sup>5</sup>) ≈ 10<sup>10</sup> 个自由度
-- TNN 方法：O(5 × 100 × 50) ≈ 25,000 个参数
+- 传统网格方法：$O(N^5) \approx 10^{10}$ 个自由度
+- TNN 方法：$O(5 \times 100 \times 50) \approx 25,000$ 个参数
 
-**网络结构**：每个一维基函数 φ<sub>k</sub> 由独立的神经网络表示
+**网络结构**：每个一维基函数 $\phi_k$ 由独立的神经网络表示
 ```
 输入(1D) → FC(100) → FC(100) → FC(100) → 输出(50)
 激活函数: sin(x)
@@ -37,33 +37,33 @@ u(x_1, \ldots, x_5) \approx \sum_{i=1}^{50} \alpha_i \prod_{k=1}^{5} \phi_k^{(i)
 
 1. **定义能量泛函**  
   利用五维 Poisson 方程的变分形式，将问题转化为最小化能量
-   
-  ```math
+  
+  $$
   \mathcal{E}(u) = \frac{1}{2} \int_{\Omega} |\nabla u|^2 \, dx - \int_{\Omega} f(x) u(x) \, dx
-  ```
+  $$
 
 2. **构造张量分解近似**  
-  通过分离变量得到系数向量 \( C \) 与一维基函数的乘积形式
-   
-  ```math
+  通过分离变量得到系数向量 $C$ 与一维基函数的乘积形式
+  
+  $$
   u_C(x) = \sum_{i=1}^{p} C_i \prod_{k=1}^{5} \phi_k^{(i)}(x_k)
-  ```
+  $$
 
 3. **数值积分与刚度矩阵**  
   使用 `quadrature.py` 中的高斯-勒让德积分在一维上计算所有需要的
-  \(L^2\) 与 \(H^1\) 积分，再通过张量积组合得到高维积分，组装线性系统
-   
-  ```math
+  $L^2$ 与 $H^1$ 积分，再通过张量积组合得到高维积分，组装线性系统
+  
+  $$
   A(C) = \int_\Omega \nabla u_C \cdot \nabla \phi_j \, dx,
   \qquad B = \int_\Omega f \phi_j \, dx
-  ```
+  $$
 
 4. **最小化能量**  
-  通过 Adam 与 L-BFGS 对 TNN 参数求解，使得 \( A C = B \) 成立并最小化
-  \( \mathcal{E}(u_C) \)。梯度由 `TNN.forward(..., need_grad=2)` 自动计算，确保二阶导数可用于能量项。
+  通过 Adam 与 L-BFGS 对 TNN 参数求解，使得 $A C = B$ 成立并最小化
+  $\mathcal{E}(u_C)$。梯度由 `TNN.forward(..., need_grad=2)` 自动计算，确保二阶导数可用于能量项。
 
 5. **误差评估与可视化**  
-  训练结束后调用 `error0_estimate` 与 `error1_estimate` 评估 \(L^2\) 与 \(H^1\)
+  训练结束后调用 `error0_estimate` 与 `error1_estimate` 评估 $L^2$ 与 $H^1$
   误差，并在固定三个坐标切片上绘制 TNN 预测与精确解。
 
 
@@ -157,9 +157,9 @@ def bd(x):
 ### 3. 张量积积分
 利用可分离性：
 
-```math
+$$
 \int_{\Omega} \prod_{k=1}^5 f_k(x_k) dx = \prod_{k=1}^5 \int f_k(x_k) dx_k
-```
+$$
 
 将 5 维积分分解为 5 个 1 维积分的乘积
 
