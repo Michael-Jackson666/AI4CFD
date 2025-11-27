@@ -39,7 +39,7 @@ $$
   利用五维 Poisson 方程的变分形式，将问题转化为最小化能量
   
   $$
-  \mathcal{E}(u) = \frac{1}{2} \int_{\Omega} |\nabla u|^2 \, dx - \int_{\Omega} f(x) u(x) \, dx
+  \mathcal{E}(u) = \frac{1}{2} \int_{\Omega} |\nabla u|^2 \mathrm{d}x - \int_{\Omega} f(x) u(x) \mathrm{d}x
   $$
 
 2. **构造张量分解近似**  
@@ -54,8 +54,8 @@ $$
   $L^2$ 与 $H^1$ 积分，再通过张量积组合得到高维积分，组装线性系统
   
   $$
-  A(C) = \int_\Omega \nabla u_C \cdot \nabla \phi_j \, dx,
-  \qquad B = \int_\Omega f \phi_j \, dx
+  A(C) = \int_\Omega \nabla u_C \cdot \nabla \phi_j \mathrm{d}x,
+  \qquad B = \int_\Omega f \phi_j \mathrm{d}x
   $$
 
 4. **最小化能量**  
@@ -116,7 +116,7 @@ loss = ∫|ΔC·φ|² + (d+3)²π⁴∫f² + 2(d+3)π²∫(ΔC·φ)·f
 1. **Adam**: 50,000 epochs, lr=0.003 (快速探索)
 2. **L-BFGS**: 10,000 epochs (精细优化)
 
-**可视化**：固定 x₃=x₄=x₅=0，绘制 x₁-x₂ 平面的 2D 切片
+**可视化**：绘制两个优化器的Loss曲线
 
 ## 快速开始
 
