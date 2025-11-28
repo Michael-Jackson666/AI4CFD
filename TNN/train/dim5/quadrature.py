@@ -10,7 +10,7 @@ def quadrature_1d(N, dtype=torch.double, device='cpu'):
     Quadrature points and weights for one-dimensional Gauss-Legendre quadrature rules in computational domain [-1,1].
     
     Parameters:
-        N: number of quadrature points in domain [1-,1]
+        N: number of quadrature points in domain [-1,1]
         dtype, device
     Returns:
         X: quadrature points size([N])

@@ -23,8 +23,8 @@ u(x_1, \ldots, x_5) \approx \sum_{i=1}^{50} \alpha_i \prod_{k=1}^{5} \phi_k^{(i)
 $$
 
 **参数量对比**：
-- 传统网格方法：$O(N^5) \approx 10^{10}$ 个自由度
-- TNN 方法：$O(5 \times 100 \times 50) \approx 25,000$ 个参数
+  1.传统网格方法：$O(N^5) \approx 10^{10}$ 个自由度
+  2.TNN 方法：$O(5 \times 100 \times 50) \approx 25,000$ 个参数
 
 **网络结构**：每个一维基函数 $\phi_k$ 由独立的神经网络表示
 ```
