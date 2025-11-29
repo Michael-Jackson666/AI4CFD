@@ -23,8 +23,9 @@ u(x_1, \ldots, x_5) \approx \sum_{i=1}^{50} \alpha_i \prod_{k=1}^{5} \phi_k^{(i)
 $$
 
 **参数量对比**：
-  1.传统网格方法：$O(N^5) \approx 10^{10}$ 个自由度
-  2.TNN 方法：$O(5 \times 100 \times 50) \approx 25,000$ 个参数
+
+- 传统网格方法：$O(N^5) \approx 10^{10}$ 个自由度
+- TNN 方法：$O(5 \times 100 \times 50) \approx 25{,}000$ 个参数
 
 **网络结构**：每个一维基函数 $\phi_k$ 由独立的神经网络表示
 ```
@@ -33,38 +34,48 @@ $$
 边界条件: 乘以 sin(πx) 强制边界为零
 ```
 
-## 用 TNN 求解 PDE 的步骤
+## 求解流程（与代码完全对应）
 
-1. **定义能量泛函**  
-  利用五维 Poisson 方程的变分形式，将问题转化为最小化能量
-  
-  $$
-  \mathcal{E}(u) = \frac{1}{2} \int_{\Omega} |\nabla u|^2 \mathrm{d}x - \int_{\Omega} f(x) u(x) \mathrm{d}x
-  $$
+1. **高维积分离散**  
+  `quadrature.py` 中的 `composite_quadrature_1d(quad=16, n=200)` 先在一维区间上生成 16×200=3200 个 Gauss-Legendre 积分点，再对五个维度执行张量积以形成高维积分权重。`ex_5_1_dim5.py` 中的所有积分函数如 `Int2TNN`、`Int2TNN_amend_1d` 都只依赖这些一维节点，避免构造 $3200^5$ 的网格。
 
-2. **构造张量分解近似**  
-  通过分离变量得到系数向量 $C$ 与一维基函数的乘积形式
-  
+2. **构造张量基与其导数**  
+  `TNN.forward(w, x, need_grad=2)` 会输出 
   $$
-  u_C(x) = \sum_{i=1}^{p} C_i \prod_{k=1}^{5} \phi_k^{(i)}(x_k)
+  \phi_{d,i}(x_n),\quad \partial_{x_d} \phi_{d,i}(x_n),\quad \partial_{x_d}^2 \phi_{d,i}(x_n)
   $$
+  其中 $d=1\ldots5,\ i=1\ldots p,\ n=1\ldots N$。
+  - 边界条件通过 `bd(x)=(x-a)(b-x)` 在每个一维网络的输出处强制。
+  - 所有基函数会进行 $\|\phi_{d,i}\|_{L^2(w)}=1$ 的归一化（`normalization(...)`）。
 
-3. **数值积分与刚度矩阵**  
-  使用 `quadrature.py` 中的高斯-勒让德积分在一维上计算所有需要的
-  $L^2$ 与 $H^1$ 积分，再通过张量积组合得到高维积分，组装线性系统
-  
+3. **求解能量泛函的最优系数**  
+  目标能量为
   $$
-  A(C) = \int_\Omega \nabla u_C \cdot \nabla \phi_j \mathrm{d}x,
-  \qquad B = \int_\Omega f \phi_j \mathrm{d}x
+  \mathcal{E}(u)=\tfrac12\int_{\Omega}|\nabla u|^2\,\mathrm{d}x-\int_{\Omega}f u\,\mathrm{d}x.
   $$
+  代码中以张量基展开 $u=\sum_i C_i \prod_d \phi_{d,i}(x_d)$ 后，利用 
+  ```python
+  part1 = Int2TNN_amend_1d(...)
+  part2 = Int2TNN(...)
+  C = torch.linalg.solve(part1, (dim+3)*pi**2*part2)
+  ```
+  建立线性系统 $A C = B$，其中 `part1` 是 $\langle \nabla \phi_i, \nabla \phi_j \rangle$，`part2` 是 $\langle f, \phi_j \rangle$。
 
-4. **最小化能量**  
-  通过 Adam 与 L-BFGS 对 TNN 参数求解，使得 $A C = B$ 成立并最小化
-  $\mathcal{E}(u_C)$。梯度由 `TNN.forward(..., need_grad=2)` 自动计算，确保二阶导数可用于能量项。
+4. **Laplace 项与损失构造**  
+  为了最小化 $\| -\Delta u - f\|_{L^2}$，脚本把二阶导数张量 `grad_grad_phi` 替换到每个维度上，得到
+  $$
+  \Delta u = \sum_i C_i \sum_{d=1}^5 \partial_{x_d}^2 \phi_{d,i}(x_d) \prod_{k\ne d}\phi_{k,i}(x_k).
+  $$
+  最终损失由三部分组成：
+  $$
+  	ext{loss} = \langle \Delta u, \Delta u \rangle + (d+3)^2 \pi^4 \langle f,f \rangle + 2(d+3)\pi^2 \langle \Delta u, f \rangle,
+  $$
+  与代码 `part1 + (dim+3)**2*np.pi**4*part2 + 2*(dim+3)*np.pi**2*part3` 对应。
 
-5. **误差评估与可视化**  
-  训练结束后调用 `error0_estimate` 与 `error1_estimate` 评估 $L^2$ 与 $H^1$
-  误差，并在固定三个坐标切片上绘制 TNN 预测与精确解。
+5. **优化与可视化**  
+  - **Adam 阶段**：500 epoch，学习率 0.003（`loss_history_adam`）。
+  - **L-BFGS 阶段**：100 epoch，学习率 1。`loss_history_lbfgs` 接在 Adam 之后绘制，图中还画出“Optimizer Switch”竖线。
+  训练完成后，用 `error0_estimate`、`error1_estimate` 给出 $L^2$ 与 $H^1$ 误差，最后在切片 $(x_3,x_4,x_5)=(0,0,0)$ 上可视化 TNN 预测与精确解。
 
 
 ## 代码文件说明
