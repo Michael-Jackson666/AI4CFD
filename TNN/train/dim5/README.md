@@ -131,6 +131,9 @@ loss = ∫|ΔC·φ|² + (d+3)²π⁴∫f² + 2(d+3)π²∫(ΔC·φ)·f
 
 ## 快速开始
 
+### 教程
+推荐先阅读 **[tnn_tutorial.ipynb](tnn_tutorial.ipynb)**，该 Jupyter 教程按照代码逻辑逐步讲解求解流程。
+
 ### 环境要求
 ```bash
 Python >= 3.9
