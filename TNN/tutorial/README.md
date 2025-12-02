@@ -1,61 +1,61 @@
-# TNN Tutorial
+# TNN 教程
 
-## Overview
+## 概述
 
-This tutorial provides a comprehensive introduction to **Tensor Neural Networks (TNN)** for solving high-dimensional partial differential equations (PDEs). The tutorial implements TNN from scratch using PyTorch and demonstrates its application on a 2D Poisson equation.
+本教程全面介绍如何使用**张量神经网络（TNN）**求解高维偏微分方程（PDE）。教程使用 PyTorch 从零实现 TNN，并以二维 Poisson 方程为例进行演示。
 
-## What is TNN?
+## 什么是 TNN？
 
-Tensor Neural Network is a specialized neural network architecture designed for high-dimensional PDE problems. It leverages **tensor decomposition** to represent the solution as:
+张量神经网络是一种专为高维 PDE 问题设计的神经网络架构。它利用**张量分解**将解表示为：
 
 $$
 u(x_1, x_2, \ldots, x_d) = \sum_{k=1}^{r} \prod_{i=1}^{d} \phi_i^{(k)}(x_i)
 $$
 
-where:
-- $r$ is the **rank** (number of terms in decomposition)
-- $\phi_i^{(k)}$ are 1D neural networks for each dimension
-- This reduces parameters from $O(N^d)$ to $O(drN)$
+其中：
+- $r$ 是**秩**（分解的项数）
+- $\phi_i^{(k)}$ 是每个维度的一维神经网络
+- 参数量从 $O(N^d)$ 降低到 $O(drN)$
 
-## Tutorial Contents
+## 教程内容
 
-### 1. Introduction
-- TNN overview and advantages
-- Comparison with standard neural networks
-- Tutorial roadmap
+### 1. 引言
+- TNN 概述与优势
+- 与标准神经网络的对比
+- 教程路线图
 
-### 2. Preparation
-- Library imports (PyTorch, NumPy, Matplotlib)
-- Chinese font configuration for plots
+### 2. 准备工作
+- 导入库（PyTorch、NumPy、Matplotlib）
+- 中文字体配置
 
-### 3. Core Components Implementation
+### 3. 核心组件实现
 
-#### 3.1 Boundary Functions
-- `bd(x)`: Boundary distance function
-- `grad_bd(x)`: Gradient of boundary function
-- `grad_grad_bd(x)`: Hessian of boundary function
-- Purpose: Enforce homogeneous Dirichlet boundary conditions
+#### 3.1 边界函数
+- `bd(x)`：边界距离函数
+- `grad_bd(x)`：边界函数的梯度
+- `grad_grad_bd(x)`：边界函数的 Hessian
+- 用途：强制齐次 Dirichlet 边界条件
 
-#### 3.2 TNN Linear Layer
-- Custom linear transformation layer
-- Batch processing for tensor decomposition
-- Weight shape: `[dim, n_out, n_in]`
+#### 3.2 TNN 线性层
+- 自定义线性变换层
+- 张量分解的批处理
+- 权重形状：`[dim, n_out, n_in]`
 
-#### 3.3 Activation Function (TNN_Sin)
-- Sine activation: `σ(x) = sin(x)`
-- First derivative: `σ'(x) = cos(x)`
-- Second derivative: `σ''(x) = -sin(x)`
-- Smooth and periodic for PDE problems
+#### 3.3 激活函数（TNN_Sin）
+- 正弦激活：$\sigma(x) = \sin(x)$
+- 一阶导数：$\sigma'(x) = \cos(x)$
+- 二阶导数：$\sigma''(x) = -\sin(x)$
+- 光滑且周期性，适合 PDE 问题
 
-#### 3.4 Complete TNN Model
-- `SimpleTNN` class implementation
-- Supports computing values, gradients, and Hessians
-- Automatic boundary condition enforcement
-- Orthogonal weight initialization
+#### 3.4 完整 TNN 模型
+- `SimpleTNN` 类实现
+- 支持计算函数值、梯度和 Hessian
+- 自动边界条件强制
+- 正交权重初始化
 
-### 4. Application: 2D Poisson Equation
+### 4. 应用：二维 Poisson 方程
 
-**Problem**: Solve the following PDE on $\Omega = [-1, 1]^2$:
+**问题**：在 $\Omega = [-1, 1]^2$ 上求解以下 PDE：
 
 $$
 \begin{cases}
@@ -64,97 +64,97 @@ u = 0 & \text{on } \partial\Omega
 \end{cases}
 $$
 
-where $f(x, y) = 2\pi^2 \sin(\pi x) \sin(\pi y)$
+其中 $f(x, y) = 2\pi^2 \sin(\pi x) \sin(\pi y)$
 
-**Exact solution**: $u(x, y) = \sin(\pi x) \sin(\pi y)$
+**精确解**：$u(x, y) = \sin(\pi x) \sin(\pi y)$
 
-**Variational formulation**: Minimize energy functional
+**变分形式**：最小化能量泛函
 
 $$
 E(u) = \frac{1}{2}\int_\Omega |\nabla u|^2 dx - \int_\Omega f \cdot u \, dx
 $$
 
-#### Implementation Steps:
-1. **Quadrature setup**: Gauss-Legendre integration nodes (40×40)
-2. **Loss function**: Energy functional with numerical integration
-3. **Training**: Adam optimizer, 5000 epochs
-4. **Visualization**: Solution comparison and error analysis
+#### 实现步骤：
+1. **积分点设置**：Gauss-Legendre 积分节点（40×40）
+2. **损失函数**：数值积分的能量泛函
+3. **训练**：Adam 优化器，5000 epochs
+4. **可视化**：解的对比与误差分析
 
-### 5. Results Visualization
-- Training loss convergence curve
-- Exact solution vs TNN prediction comparison
-- Absolute error distribution heatmap
-- Center-line profile comparison
-- L2 and maximum error metrics
+### 5. 结果可视化
+- 训练损失收敛曲线
+- 精确解 vs TNN 预测对比
+- 绝对误差分布热力图
+- 中心线剖面对比
+- L2 误差和最大误差指标
 
-### 6. Summary and Extensions
-- TNN advantages for high-dimensional problems
-- Pointers to advanced topics:
-  - Non-homogeneous boundary conditions (ex_5_2)
-  - Neumann boundary conditions (ex_5_3)
-  - Eigenvalue problems (ex_5_4)
-  - Unbounded domains (ex_5_5)
-  - Higher dimensions (5D, 10D, 20D examples)
+### 6. 总结与扩展
+- TNN 在高维问题中的优势
+- 进阶主题指引：
+  - 非齐次边界条件（ex_5_2）
+  - Neumann 边界条件（ex_5_3）
+  - 特征值问题（ex_5_4）
+  - 无界域（ex_5_5）
+  - 更高维度（5D、10D、20D 示例）
 
-## Requirements
+## 环境要求
 
 ```bash
 pip install torch numpy matplotlib
 ```
 
-## Usage
+## 使用方法
 
-Open the Jupyter notebook and run cells sequentially:
+打开 Jupyter notebook 并按顺序运行单元格：
 
 ```bash
 jupyter notebook TNN_tutorial.ipynb
 ```
 
-The tutorial is self-contained and includes:
-- ✅ All necessary imports
-- ✅ Complete code implementation
-- ✅ Mathematical explanations
-- ✅ Visualization examples
-- ✅ Working 2D Poisson equation demo
+本教程自包含，包括：
+- ✅ 所有必要的导入
+- ✅ 完整的代码实现
+- ✅ 数学推导说明
+- ✅ 可视化示例
+- ✅ 可运行的 2D Poisson 方程演示
 
-## Key Features
+## 主要特点
 
-1. **From Scratch Implementation**: Build TNN step-by-step with clear explanations
-2. **Mathematical Rigor**: Detailed derivations and variational formulations
-3. **Practical Example**: Complete workflow from problem definition to visualization
-4. **Chinese Language**: All explanations in Chinese for better understanding
-5. **Executable Code**: All cells can be run directly to reproduce results
+1. **从零实现**：逐步构建 TNN，配有清晰解释
+2. **数学严谨**：详细的推导和变分公式
+3. **实际案例**：从问题定义到可视化的完整流程
+4. **中文讲解**：所有解释均为中文，便于理解
+5. **可执行代码**：所有单元格可直接运行复现结果
 
-## Expected Results
+## 预期结果
 
-After training (5000 epochs with rank=50):
-- **L2 Error**: ~10⁻⁴ to 10⁻⁵
-- **Max Error**: ~10⁻³ to 10⁻⁴
-- **Training Time**: ~2-5 minutes (CPU)
+训练后（5000 epochs，rank=50）：
+- **L2 误差**：约 10⁻⁴ ~ 10⁻⁵
+- **最大误差**：约 10⁻³ ~ 10⁻⁴
+- **训练时间**：约 2-5 分钟（CPU）
 
-## Learning Outcomes
+## 学习成果
 
-After completing this tutorial, you will:
-- ✅ Understand tensor decomposition for neural networks
-- ✅ Implement TNN from scratch in PyTorch
-- ✅ Know how to enforce boundary conditions automatically
-- ✅ Apply variational methods for PDE solving
-- ✅ Use Gauss-Legendre quadrature for integration
-- ✅ Visualize and analyze PDE solutions
+完成本教程后，您将：
+- ✅ 理解神经网络的张量分解
+- ✅ 使用 PyTorch 从零实现 TNN
+- ✅ 掌握自动边界条件强制方法
+- ✅ 应用变分方法求解 PDE
+- ✅ 使用 Gauss-Legendre 积分进行数值积分
+- ✅ 可视化和分析 PDE 解
 
-## References
+## 参考资料
 
-For more advanced examples, see the `../example/` directory:
-- `ex_5_1/`: Homogeneous Dirichlet BC (dimensions 5, 10, 20)
-- `ex_5_2/`: Non-homogeneous BC with two-TNN decomposition
-- `ex_5_3/`: Neumann BC with weak formulation
-- `ex_5_4/`: Eigenvalue problems
-- `ex_5_5/`: Unbounded domains with Hermite-Gauss quadrature
+更多进阶示例请参见 `../example/` 目录：
+- `ex_5_1/`：齐次 Dirichlet 边界条件（5、10、20 维）
+- `ex_5_2/`：非齐次边界条件与双 TNN 分解
+- `ex_5_3/`：Neumann 边界条件与弱形式
+- `ex_5_4/`：特征值问题
+- `ex_5_5/`：无界域与 Hermite-Gauss 积分
 
-## Author
+## 作者
 
-Created as part of the AI4CFD project.
+AI4CFD 项目组
 
-## License
+## 许可证
 
-See the main repository LICENSE file.
+见主仓库 LICENSE 文件
