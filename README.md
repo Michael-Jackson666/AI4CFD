@@ -12,9 +12,10 @@ Complete implementations of deep learning methods for solving Partial Differenti
 **Neural networks that encode physical laws directly into the loss function**
 
 Core Idea: Construct physics-constrained loss using automatic differentiation:
-```
-Loss = MSE(Boundary) + MSE(Initial) + MSE(PDE Residual)
-```
+
+$$
+\mathcal{L} = \mathcal{L}_{data} + \mathcal{L}_{PDE} = \frac{1}{N_b}\sum_{i=1}^{N_b}\|u(x_b^i) - u_b^i\|^2 + \frac{1}{N_f}\sum_{j=1}^{N_f}\|\mathcal{N}[u](x_f^j)\|^2
+$$
 
 - **Advantages**: Low data requirements, handles complex boundaries, suitable for inverse problems
 - **Location**: `PINNs/`
@@ -24,12 +25,11 @@ Loss = MSE(Boundary) + MSE(Initial) + MSE(PDE Residual)
 ### 2. Deep Operator Networks (DeepONet)
 **Neural networks learning mappings between infinite-dimensional function spaces**
 
-Core Idea: Branch-Trunk architecture for learning operators G: u → G(u):
-```
-DeepONet(u)(y) = Σᵢ bᵢ(u) · tᵢ(y)
-Branch network bᵢ: Encodes input function u
-Trunk network tᵢ: Encodes output location y
-```
+Core Idea: Branch-Trunk architecture for learning operators $G: u \to G(u)$:
+
+$$
+G(u)(y) \approx \sum_{k=1}^{p} \underbrace{b_k(u)}_{\text{Branch}} \cdot \underbrace{t_k(y)}_{\text{Trunk}}
+$$
 
 - **Advantages**: Train once, fast inference (milliseconds), efficient for multi-query
 - **Location**: `DeepONet/`
@@ -40,10 +40,10 @@ Trunk network tᵢ: Encodes output location y
 **Neural operators solving PDEs in frequency domain**
 
 Core Idea: Convolution in Fourier space for global information propagation:
-```
-v(x) = σ(W·u(x) + (K*u)(x))
-where K*u computed in frequency domain: F⁻¹(R · F(u))
-```
+
+$$
+v_{t+1}(x) = \sigma\left( W v_t(x) + \mathcal{F}^{-1}(R \cdot \mathcal{F}(v_t))(x) \right)
+$$
 
 - **Advantages**: Resolution-invariant, excellent for periodic problems, high-resolution solving
 - **Location**: `FNO/`
@@ -53,9 +53,10 @@ where K*u computed in frequency domain: F⁻¹(R · F(u))
 **Neural networks using tensor decomposition for high-dimensional PDEs**
 
 Core Idea: Decompose high-dimensional functions into products of low-dimensional functions:
-```
-u(x₁,...,xₐ) ≈ Σᵢ αᵢ · ∏ₖ φₖ⁽ⁱ⁾(xₖ)
-```
+
+$$
+u(x_1, \dots, x_d) \approx \sum_{r=1}^{R} \prod_{k=1}^{d} \phi_k^{(r)}(x_k)
+$$
 
 - **Advantages**: Linear parameter growth (vs exponential), suitable for high-dimensional problems
 - **Location**: `TNN/`
@@ -65,7 +66,11 @@ u(x₁,...,xₐ) ≈ Σᵢ αᵢ · ∏ₖ φₖ⁽ⁱ⁾(xₖ)
 ### 5. Transformer-based Methods
 **Sequence models using attention mechanisms for PDE solving**
 
-Core Idea: Capture long-range dependencies in spatial/temporal domains via self-attention
+Core Idea: Capture long-range dependencies in spatial/temporal domains via self-attention:
+
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
 
 - **Advantages**: Long-range dependency capture, flexible architecture design
 - **Location**: `Transformer/`
