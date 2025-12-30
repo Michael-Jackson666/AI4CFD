@@ -1,152 +1,152 @@
-# AI4CFD 工具库 (Utils)
+# AI4CFD Utility Package (Utils)
 
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/Michael-Jackson666/AI4CFD)
 [![Python](https://img.shields.io/badge/Python-3.8+-brightgreen.svg)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-1.10+-orange.svg)](https://pytorch.org)
 
-本目录包含 AI4CFD 项目的**综合工具库**，提供快速实现 PINNs、DeepONet、FNO、TNN、Transformer 等 AI4CFD 算法所需的全部组件。
+This directory contains the **comprehensive utility library** for the AI4CFD project, providing all necessary components for quickly implementing AI4CFD algorithms such as PINNs, DeepONet, FNO, TNN, and Transformers.
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
 ```python
-# 一行导入所有工具
+# Import all tools in one line
 from utils import (
-    # 快速创建模型
+    # Quickly create models
     create_pinn, create_deeponet, create_fno, create_tnn, create_pde_transformer,
-    # 训练工具
+    # Training tools
     train_model, PINNTrainer, FNOTrainer,
-    # 数据生成
+    # Data generation
     generate_burgers_data, generate_navier_stokes_data,
-    # 评估和可视化
+    # Evaluation and visualization
     relative_l2_error, plot_2d_solution
 )
 
-# 快速创建 PINN 模型
+# Quickly create PINN model
 model = create_pinn(input_dim=2, output_dim=1, hidden_dims=[64, 64, 64])
 
-# 快速创建 FNO 模型
+# Quickly create FNO model
 fno = create_fno(modes=16, width=64, dim=2)
 
-# 快速创建 DeepONet
+# Quickly create DeepONet
 deeponet = create_deeponet(branch_input_dim=100, trunk_input_dim=1)
 ```
 
-## 📁 模块结构
+## 📁 Module Structure
 
 ```
 utils/
-├── __init__.py       # 统一导出接口 + 快速创建函数
-├── data_utils.py     # 数据生成、加载、预处理
-├── nn_blocks.py      # 神经网络构建模块
-├── training.py       # 训练工具、损失函数、优化器
-├── trainers.py       # 各类方法的专用 Trainer
-├── metrics.py        # 评估指标
-├── plotting.py       # 可视化工具
-└── README.md         # 本文档
+├── __init__.py       # Unified export interface + quick creation functions
+├── data_utils.py     # Data generation, loading, preprocessing
+├── nn_blocks.py      # Neural network building blocks
+├── training.py       # Training tools, loss functions, optimizers
+├── trainers.py       # Specialized Trainers for various methods
+├── metrics.py        # Evaluation metrics
+├── plotting.py       # Visualization tools
+└── README.md         # This document
 ```
 
 ---
 
-## 📚 详细文档
+## 📚 Detailed Documentation
 
-### 1️⃣ `nn_blocks.py` - 神经网络模块
+### 1️⃣ `nn_blocks.py` - Neural Network Modules
 
-提供所有 AI4CFD 方法的核心网络组件：
+Provides core network components for all AI4CFD methods:
 
-#### 基础模块
+#### Basic Modules
 
-| 类名 | 说明 | 使用场景 |
+| Class Name | Description | Usage Scenario |
 |------|------|----------|
-| `MLP` | 多层感知机 | 通用基础网络 |
-| `FourierFeatures` | 傅里叶特征编码 | 捕获高频信息 |
-| `ModifiedMLP` | 改进版 MLP | 更好的表达能力 |
-| `ResidualBlock` | 残差块 | 深层网络训练 |
-| `ResMLP` | 残差 MLP | 避免梯度消失 |
+| `MLP` | Multi-Layer Perceptron | General basic network |
+| `FourierFeatures` | Fourier Feature Encoding | Capturing high-frequency information |
+| `ModifiedMLP` | Modified MLP | Better expressivity |
+| `ResidualBlock` | Residual Block | Deep network training |
+| `ResMLP` | Residual MLP | Avoiding gradient vanishing |
 
-#### PINNs 模块
+#### PINNs Modules
 
-| 类名 | 说明 |
+| Class Name | Description |
 |------|------|
-| `PINN` | 标准物理信息神经网络 |
-| `AdaptiveWeightPINN` | 自适应权重 PINN（自动平衡损失项） |
+| `PINN` | Standard Physics-Informed Neural Network |
+| `AdaptiveWeightPINN` | Adaptive Weight PINN (Auto-balancing loss terms) |
 
 ```python
 from utils import PINN, AdaptiveWeightPINN
 
-# 标准 PINN
+# Standard PINN
 pinn = PINN(input_dim=2, output_dim=1, hidden_dims=[64, 64, 64, 64])
 
-# 自适应权重 PINN
+# Adaptive Weight PINN
 adaptive_pinn = AdaptiveWeightPINN(input_dim=2, output_dim=1, hidden_dims=[64]*4)
 ```
 
-#### DeepONet 模块
+#### DeepONet Modules
 
-| 类名 | 说明 |
+| Class Name | Description |
 |------|------|
-| `DeepONet` | 标准 DeepONet |
-| `StackedDeepONet` | 多层堆叠 DeepONet |
+| `DeepONet` | Standard DeepONet |
+| `StackedDeepONet` | Stacked DeepONet |
 
 ```python
 from utils import DeepONet, StackedDeepONet
 
-# 学习算子: u(x) -> G(u)(y)
+# Learn operator: u(x) -> G(u)(y)
 deeponet = DeepONet(
-    branch_input_dim=100,   # 传感器点数
-    trunk_input_dim=1,      # 查询点维度
+    branch_input_dim=100,   # Number of sensor points
+    trunk_input_dim=1,      # Query point dimension
     branch_layers=[100, 100],
     trunk_layers=[100, 100],
-    p=50                    # 输出维度
+    p=50                    # Output dimension
 )
 
-# 堆叠版本（更强表达能力）
+# Stacked version (Stronger expressivity)
 stacked = StackedDeepONet(branch_input_dim=100, trunk_input_dim=1, num_layers=3)
 ```
 
-#### FNO 模块
+#### FNO Modules
 
-| 类名 | 说明 |
+| Class Name | Description |
 |------|------|
-| `SpectralConv1d` | 1D 谱卷积层 |
-| `SpectralConv2d` | 2D 谱卷积层 |
-| `FNO1d` | 1D 傅里叶神经算子 |
-| `FNO2d` | 2D 傅里叶神经算子 |
+| `SpectralConv1d` | 1D Spectral Convolution Layer |
+| `SpectralConv2d` | 2D Spectral Convolution Layer |
+| `FNO1d` | 1D Fourier Neural Operator |
+| `FNO2d` | 2D Fourier Neural Operator |
 
 ```python
 from utils import FNO1d, FNO2d
 
-# 1D FNO（如 Burgers 方程）
+# 1D FNO (e.g., Burgers equation)
 fno_1d = FNO1d(in_channels=1, out_channels=1, modes=16, width=64)
 
-# 2D FNO（如 Navier-Stokes）
+# 2D FNO (e.g., Navier-Stokes)
 fno_2d = FNO2d(in_channels=1, out_channels=1, modes1=12, modes2=12, width=32)
 ```
 
-#### TNN 模块
+#### TNN Modules
 
-| 类名 | 说明 |
+| Class Name | Description |
 |------|------|
-| `TensorLayer` | 张量分解层 |
-| `TNN` | 张量神经网络 |
-| `TuckerTNN` | Tucker 分解 TNN |
+| `TensorLayer` | Tensor Decomposition Layer |
+| `TNN` | Tensor Neural Network |
+| `TuckerTNN` | Tucker Decomposition TNN |
 
 ```python
 from utils import TNN, TuckerTNN
 
-# 标准 TNN
+# Standard TNN
 tnn = TNN(input_dim=3, output_dim=1, rank=20)
 
-# Tucker 分解版本
+# Tucker Decomposition version
 tucker_tnn = TuckerTNN(input_dim=3, output_dim=1, rank=15)
 ```
 
-#### Transformer 模块
+#### Transformer Modules
 
-| 类名 | 说明 |
+| Class Name | Description |
 |------|------|
-| `PositionalEncoding` | 位置编码 |
-| `PDETransformer` | PDE 求解 Transformer |
-| `SpatioTemporalTransformer` | 时空 Transformer |
+| `PositionalEncoding` | Positional Encoding |
+| `PDETransformer` | PDE Solving Transformer |
+| `SpatioTemporalTransformer` | Spatio-Temporal Transformer |
 
 ```python
 from utils import PDETransformer, SpatioTemporalTransformer
@@ -157,7 +157,7 @@ pde_trans = PDETransformer(
     d_model=64, nhead=4, num_layers=4
 )
 
-# 时空 Transformer（适合时间演化问题）
+# Spatio-Temporal Transformer (Suitable for time evolution problems)
 st_trans = SpatioTemporalTransformer(
     spatial_dim=2, temporal_dim=1, output_dim=1
 )
@@ -165,164 +165,164 @@ st_trans = SpatioTemporalTransformer(
 
 ---
 
-### 2️⃣ `data_utils.py` - 数据工具
+### 2️⃣ `data_utils.py` - Data Utilities
 
-#### PDE 数据生成
+#### PDE Data Generation
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `generate_1d_poisson_data()` | 1D Poisson 方程 |
-| `generate_2d_poisson_data()` | 2D Poisson 方程 |
-| `generate_heat_equation_data()` | 热传导方程 |
-| `generate_burgers_data()` | Burgers 方程（谱方法求解） |
-| `generate_navier_stokes_data()` | 2D Navier-Stokes（涡量-流函数） |
-| `generate_wave_equation_data()` | 波动方程 |
+| `generate_1d_poisson_data()` | 1D Poisson Equation |
+| `generate_2d_poisson_data()` | 2D Poisson Equation |
+| `generate_heat_equation_data()` | Heat Equation |
+| `generate_burgers_data()` | Burgers' Equation (Spectral Method) |
+| `generate_navier_stokes_data()` | 2D Navier-Stokes (Vorticity-Stream Function) |
+| `generate_wave_equation_data()` | Wave Equation |
 
 ```python
 from utils import generate_burgers_data, generate_navier_stokes_data
 
-# Burgers 方程数据
+# Burgers equation data
 x, t, u = generate_burgers_data(n_x=256, n_t=100, nu=0.01)
 
-# Navier-Stokes 数据
+# Navier-Stokes data
 x, y, t, omega = generate_navier_stokes_data(n_x=64, n_y=64, n_t=20, Re=1000)
 ```
 
-#### 算子学习数据
+#### Operator Learning Data
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `generate_operator_data()` | DeepONet 算子学习数据 |
-| `generate_parametric_pde_data()` | 参数化 PDE 数据 |
-| `generate_fno_data()` | FNO 训练数据 |
+| `generate_operator_data()` | DeepONet Operator Learning Data |
+| `generate_parametric_pde_data()` | Parametric PDE Data |
+| `generate_fno_data()` | FNO Training Data |
 
 ```python
 from utils import generate_operator_data, generate_fno_data
 
-# DeepONet: 学习反导数算子
+# DeepONet: Learn antiderivative operator
 u_sensors, y_query, G_u = generate_operator_data(
     operator_type='antiderivative', n_samples=1000
 )
 
-# FNO: Darcy 流或 Navier-Stokes
+# FNO: Darcy Flow or Navier-Stokes
 train_data, test_data = generate_fno_data(pde_type='darcy', n_samples=1000)
 ```
 
-#### 边界/初始条件
+#### Boundary/Initial Conditions
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `create_boundary_conditions()` | 创建边界条件点 |
-| `create_initial_conditions()` | 创建初始条件点 |
-| `create_mesh_grid()` | 创建多维网格 |
+| `create_boundary_conditions()` | Create Boundary Condition Points |
+| `create_initial_conditions()` | Create Initial Condition Points |
+| `create_mesh_grid()` | Create Multi-dimensional Mesh Grid |
 
 ```python
 from utils import create_boundary_conditions, create_mesh_grid
 
-# 2D 边界条件
+# 2D Boundary Conditions
 bc_coords, bc_vals = create_boundary_conditions(
     domain=[(-1, 1), (-1, 1)], n_points=100, bc_type='dirichlet', bc_value=0
 )
 
-# 创建网格
+# Create Mesh Grid
 coords = create_mesh_grid(domain=[(0, 1), (0, 1)], n_points=[50, 50])
 ```
 
-#### DataLoader 工具
+#### DataLoader Tools
 
-| 类/函数 | 说明 |
+| Class/Function | Description |
 |---------|------|
-| `PDEDataset` | 通用 PDE 数据集 |
-| `DeepONetDataset` | DeepONet 数据集 |
-| `create_training_dataloader()` | 创建训练 DataLoader |
-| `create_fno_dataloader()` | 创建 FNO DataLoader |
-| `create_deeponet_dataloader()` | 创建 DeepONet DataLoader |
+| `PDEDataset` | Generic PDE Dataset |
+| `DeepONetDataset` | DeepONet Dataset |
+| `create_training_dataloader()` | Create Training DataLoader |
+| `create_fno_dataloader()` | Create FNO DataLoader |
+| `create_deeponet_dataloader()` | Create DeepONet DataLoader |
 
 ---
 
-### 3️⃣ `training.py` - 训练工具
+### 3️⃣ `training.py` - Training Tools
 
-#### 损失函数
+#### Loss Functions
 
-| 类名 | 说明 |
+| Class Name | Description |
 |------|------|
-| `PINNLoss` | PINN 复合损失（PDE + BC + IC） |
-| `WeightedMSELoss` | 加权 MSE 损失 |
-| `RelativeMSELoss` | 相对 MSE 损失 |
-| `SobolevLoss` | Sobolev 范数损失（含导数项） |
-| `SpectralLoss` | 谱空间损失 |
+| `PINNLoss` | PINN Composite Loss (PDE + BC + IC) |
+| `WeightedMSELoss` | Weighted MSE Loss |
+| `RelativeMSELoss` | Relative MSE Loss |
+| `SobolevLoss` | Sobolev Norm Loss (Includes derivative terms) |
+| `SpectralLoss` | Spectral Space Loss |
 
 ```python
 from utils import PINNLoss, SobolevLoss
 
-# PINN 损失
+# PINN Loss
 loss_fn = PINNLoss(pde_weight=1.0, bc_weight=100.0, ic_weight=100.0)
 
-# Sobolev 损失（考虑梯度匹配）
+# Sobolev Loss (Consider gradient matching)
 sobolev = SobolevLoss(order=1, weight=0.1)
 ```
 
-#### PDE 残差计算
+#### PDE Residual Calculation
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `compute_pde_residual()` | 计算 PDE 残差（支持多种方程） |
-| `compute_derivative()` | 计算任意阶导数 |
-| `compute_laplacian()` | 计算拉普拉斯算子 |
-| `compute_gradient()` | 计算梯度 |
-| `compute_divergence()` | 计算散度 |
+| `compute_pde_residual()` | Compute PDE Residual (Supports multiple equations) |
+| `compute_derivative()` | Compute Arbitrary Order Derivative |
+| `compute_laplacian()` | Compute Laplacian Operator |
+| `compute_gradient()` | Compute Gradient |
+| `compute_divergence()` | Compute Divergence |
 
 ```python
 from utils import compute_pde_residual, compute_laplacian
 
-# 计算 Burgers 方程残差
+# Compute Burgers equation residual
 residual = compute_pde_residual(coords, u, pde_type='burgers', nu=0.01)
 
-# 计算拉普拉斯
+# Compute Laplacian
 laplacian = compute_laplacian(coords, u)
 ```
 
-#### 优化器和调度器
+#### Optimizers and Schedulers
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `get_optimizer()` | 获取优化器（Adam, SGD, LBFGS等） |
-| `get_scheduler()` | 获取学习率调度器 |
-| `WarmupCosineScheduler` | 预热+余弦衰减 |
-| `train_with_lbfgs()` | L-BFGS 精细化训练 |
+| `get_optimizer()` | Get Optimizer (Adam, SGD, LBFGS, etc.) |
+| `get_scheduler()` | Get Learning Rate Scheduler |
+| `WarmupCosineScheduler` | Warmup + Cosine Decay |
+| `train_with_lbfgs()` | L-BFGS Refined Training |
 
 ```python
 from utils import get_optimizer, get_scheduler, train_with_lbfgs
 
-# 获取优化器
+# Get Optimizer
 optimizer = get_optimizer(model, name='adam', lr=1e-3, weight_decay=1e-4)
 
-# 获取调度器
+# Get Scheduler
 scheduler = get_scheduler(optimizer, name='cosine', T_max=1000)
 
-# L-BFGS 精细化
+# L-BFGS Refinement
 model = train_with_lbfgs(model, loss_fn, data, max_iter=500)
 ```
 
-#### 训练辅助工具
+#### Training Helper Tools
 
-| 类/函数 | 说明 |
+| Class/Function | Description |
 |---------|------|
-| `EarlyStopping` | 早停机制 |
-| `GradientBalancer` | 梯度平衡（多任务学习） |
-| `adaptive_sampling()` | 自适应采样（基于残差） |
-| `gradient_clipping()` | 梯度裁剪 |
+| `EarlyStopping` | Early Stopping Mechanism |
+| `GradientBalancer` | Gradient Balancing (Multi-task Learning) |
+| `adaptive_sampling()` | Adaptive Sampling (Based on Residuals) |
+| `gradient_clipping()` | Gradient Clipping |
 
 ---
 
-### 4️⃣ `trainers.py` - 专用训练器
+### 4️⃣ `trainers.py` - Specialized Trainers
 
-提供各类方法的专用 Trainer：
+Provides specialized Trainers for various methods:
 
-| 类名 | 用于 |
+| Class Name | Used For |
 |------|------|
-| `BaseTrainer` | 基础训练器 |
-| `PINNTrainer` | PINNs（支持 L-BFGS） |
+| `BaseTrainer` | Base Trainer |
+| `PINNTrainer` | PINNs (Supports L-BFGS) |
 | `DeepONetTrainer` | DeepONet |
 | `FNOTrainer` | FNO |
 | `TNNTrainer` | TNN |
@@ -330,7 +330,7 @@ model = train_with_lbfgs(model, loss_fn, data, max_iter=500)
 ```python
 from utils import PINNTrainer, FNOTrainer
 
-# PINN 训练器
+# PINN Trainer
 pinn_trainer = PINNTrainer(
     model, 
     pde_loss_fn=burgers_residual,
@@ -339,67 +339,67 @@ pinn_trainer = PINNTrainer(
 )
 history = pinn_trainer.train(train_data, epochs=10000, lr=1e-3)
 
-# FNO 训练器
+# FNO Trainer
 fno_trainer = FNOTrainer(model)
 history = fno_trainer.train(train_loader, epochs=500, lr=1e-3)
 ```
 
 ---
 
-### 5️⃣ `metrics.py` - 评估指标
+### 5️⃣ `metrics.py` - Evaluation Metrics
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `mse_loss()` | 均方误差 |
-| `mae_loss()` | 平均绝对误差 |
-| `relative_l2_error()` | 相对 L² 误差：$\frac{\|\|u - u_{exact}\|\|_2}{\|\|u_{exact}\|\|_2}$ |
-| `relative_linf_error()` | 相对 L∞ 误差 |
-| `physics_residual_l2()` | 物理残差 L² 范数 |
-| `conservation_error()` | 守恒律误差 |
-| `energy_error()` | 能量误差 |
-| `evaluate_model_performance()` | 综合性能评估 |
+| `mse_loss()` | Mean Squared Error |
+| `mae_loss()` | Mean Absolute Error |
+| `relative_l2_error()` | Relative L² Error: $\frac{\|\|u - u_{exact}\|\|_2}{\|\|u_{exact}\|\|_2}$ |
+| `relative_linf_error()` | Relative L∞ Error |
+| `physics_residual_l2()` | Physics Residual L² Norm |
+| `conservation_error()` | Conservation Law Error |
+| `energy_error()` | Energy Error |
+| `evaluate_model_performance()` | Comprehensive Performance Evaluation |
 
 ```python
 from utils import relative_l2_error, evaluate_model_performance
 
-# 单个指标
+# Single Metric
 l2_err = relative_l2_error(u_pred, u_exact)
 print(f"Relative L2 error: {l2_err:.4e}")
 
-# 综合评估
+# Comprehensive Evaluation
 metrics = evaluate_model_performance(u_pred, u_exact, coords, model)
 print(metrics)
 ```
 
 ---
 
-### 6️⃣ `plotting.py` - 可视化
+### 6️⃣ `plotting.py` - Visualization
 
-| 函数 | 说明 |
+| Function | Description |
 |------|------|
-| `plot_1d_solution()` | 1D 解对比图 |
-| `plot_2d_solution()` | 2D 解等高线+3D 曲面 |
-| `plot_2d_comparison()` | 预测/真实/误差三合一 |
-| `plot_training_history()` | 训练历史曲线 |
-| `plot_burgers_evolution()` | Burgers 方程时间演化 |
-| `plot_residuals()` | 物理残差分布 |
-| `save_animation_frames()` | 保存动画帧 |
+| `plot_1d_solution()` | 1D Solution Comparison Plot |
+| `plot_2d_solution()` | 2D Solution Contour + 3D Surface |
+| `plot_2d_comparison()` | Prediction/Ground Truth/Error Comparison |
+| `plot_training_history()` | Training History Curve |
+| `plot_burgers_evolution()` | Burgers' Equation Time Evolution |
+| `plot_residuals()` | Physics Residual Distribution |
+| `save_animation_frames()` | Save Animation Frames |
 
 ```python
 from utils import plot_2d_comparison, plot_training_history
 
-# 2D 解对比
+# 2D Solution Comparison
 plot_2d_comparison(X, Y, u_pred, u_exact, title="Poisson Solution")
 
-# 训练历史
+# Training History
 plot_training_history(history, metrics=['loss', 'l2_error'])
 ```
 
 ---
 
-## 🎯 完整示例
+## 🎯 Complete Examples
 
-### 示例 1: 使用 PINN 求解 Burgers 方程
+### Example 1: Solving Burgers' Equation with PINN
 
 ```python
 import torch
@@ -410,32 +410,32 @@ from utils import (
     plot_2d_comparison, relative_l2_error
 )
 
-# 1. 准备数据
+# 1. Prepare Data
 x, t, u_exact = generate_burgers_data(n_x=256, n_t=100, nu=0.01)
 
-# 2. 创建模型
+# 2. Create Model
 model = create_pinn(input_dim=2, output_dim=1, hidden_dims=[64, 64, 64, 64])
 
-# 3. 定义 PDE 残差
+# 3. Define PDE Residual
 def burgers_residual(coords, u):
     return compute_pde_residual(coords, u, pde_type='burgers', nu=0.01)
 
-# 4. 准备边界和初始条件
+# 4. Prepare Boundary and Initial Conditions
 bc_data = create_boundary_conditions(domain=[(-1, 1), (0, 1)], n_points=100)
 ic_data = create_initial_conditions(domain=[(-1, 1)], n_points=100, 
                                     ic_function=lambda x: -np.sin(np.pi * x))
 
-# 5. 训练
+# 5. Train
 trainer = PINNTrainer(model, pde_loss_fn=burgers_residual, 
                       bc_data=bc_data, ic_data=ic_data)
 history = trainer.train(epochs=10000, lr=1e-3)
 
-# 6. 评估
+# 6. Evaluate
 u_pred = model(test_coords)
 print(f"Relative L2 error: {relative_l2_error(u_pred, u_exact):.4e}")
 ```
 
-### 示例 2: 使用 FNO 求解 Darcy 流
+### Example 2: Solving Darcy Flow with FNO
 
 ```python
 from utils import (
@@ -443,24 +443,24 @@ from utils import (
     FNOTrainer, relative_l2_error
 )
 
-# 1. 生成数据
+# 1. Generate Data
 train_data, test_data = generate_fno_data(pde_type='darcy', n_samples=1000)
 train_loader = create_fno_dataloader(train_data, batch_size=20)
 
-# 2. 创建 FNO
+# 2. Create FNO
 fno = create_fno(modes=12, width=32, dim=2)
 
-# 3. 训练
+# 3. Train
 trainer = FNOTrainer(fno)
 history = trainer.train(train_loader, epochs=500)
 
-# 4. 评估
+# 4. Evaluate
 with torch.no_grad():
     pred = fno(test_data['input'])
 print(f"Test L2 error: {relative_l2_error(pred, test_data['output']):.4e}")
 ```
 
-### 示例 3: 使用 DeepONet 学习算子
+### Example 3: Learning Operators with DeepONet
 
 ```python
 from utils import (
@@ -468,18 +468,18 @@ from utils import (
     DeepONetTrainer
 )
 
-# 1. 生成算子数据（学习反导数）
+# 1. Generate Operator Data (Learn Antiderivative)
 u_sensors, y_query, G_u = generate_operator_data(
     operator_type='antiderivative', n_samples=1000
 )
 
-# 2. 创建 DeepONet
+# 2. Create DeepONet
 deeponet = create_deeponet(
     branch_input_dim=100, trunk_input_dim=1,
     hidden_dim=100, p=50
 )
 
-# 3. 训练
+# 3. Train
 loader = create_deeponet_dataloader(u_sensors, y_query, G_u)
 trainer = DeepONetTrainer(deeponet)
 history = trainer.train(loader, epochs=1000)
@@ -487,9 +487,9 @@ history = trainer.train(loader, epochs=1000)
 
 ---
 
-## 📖 API 速查表
+## 📖 API Cheat Sheet
 
-### 快速创建函数
+### Quick Creation Functions
 
 ```python
 model = create_pinn(input_dim, output_dim, hidden_dims, activation, use_fourier, use_adaptive_weights)
@@ -499,7 +499,7 @@ model = create_tnn(input_dim, output_dim, rank, layers_per_dim, hidden_dim, use_
 model = create_pde_transformer(input_dim, output_dim, d_model, nhead, num_layers, dim_feedforward)
 ```
 
-### 通用训练函数
+### Universal Training Function
 
 ```python
 model, history = train_model(
@@ -517,34 +517,34 @@ model, history = train_model(
 
 ---
 
-## 📦 导入方式
+## 📦 Import Methods
 
 ```python
-# 方式 1: 完整导入
+# Method 1: Full Import
 from utils import *
 
-# 方式 2: 选择性导入
+# Method 2: Selective Import
 from utils import MLP, PINN, FNO2d, DeepONet
 from utils import generate_burgers_data, create_boundary_conditions
 from utils import PINNTrainer, relative_l2_error
 
-# 方式 3: 使用快速创建函数
+# Method 3: Using Quick Creation Functions
 from utils import create_pinn, create_fno, train_model
 ```
 
 ---
 
-## 📝 版本历史
+## 📝 Version History
 
-- **v2.0.0** (2024-12): 重大更新
-  - 新增 `nn_blocks.py`: 完整的神经网络模块库
-  - 新增 `training.py`: 损失函数、PDE 残差、优化器工具
-  - 新增 `trainers.py`: 各方法专用训练器
-  - 更新 `data_utils.py`: 增加 Navier-Stokes、波动方程数据生成
-  - 更新 `__init__.py`: 统一接口 + 快速创建函数
+- **v2.0.0** (2024-12): Major Update
+  - Added `nn_blocks.py`: Complete neural network module library
+  - Added `training.py`: Loss functions, PDE residuals, optimizer tools
+  - Added `trainers.py`: Specialized trainers for each method
+  - Updated `data_utils.py`: Added Navier-Stokes, Wave equation data generation
+  - Updated `__init__.py`: Unified interface + quick creation functions
 
-- **v1.0.0** (2024-01): 初始版本
-  - 基础数据工具、指标、可视化
+- **v1.0.0** (2024-01): Initial Version
+  - Basic data tools, metrics, visualization
 |------|------|
 | `setup_plotting_style()` | 设置统一绘图风格 |
 | `plot_1d_solution()` | 绘制 1D 解对比图 |
