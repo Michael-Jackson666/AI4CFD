@@ -15,7 +15,13 @@ Core Idea: Construct physics-constrained loss using automatic differentiation:
 
 $$
 \begin{aligned}
-\mathcal{L} = \mathcal{L}_{data} + \mathcal{L}_{PDE} = \frac{1}{N_b}\sum_{i=1}^{N_b}\|u(x_b^i) - u_b^i\|^2 + \frac{1}{N_f}\sum_{j=1}^{N_f}\|\mathcal{N}[u](x_f^j)\|^2
+\mathcal{L} = \mathcal{L}_{data} + \mathcal{L}_{PDE} = \frac{1}{N_b}\sum_{i=1}^{N_b}\left\|u(x_b^i) - u_b^i\right\|^2 + \frac{1}{N_f}\sum_{j=1}^{N_f}\left\|\mathcal{N} \left[u\right] (x_f^j)\right\|^2
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\mathcal{L} = \mathcal{L}_{data} + \mathcal{L}_{PDE} = \frac{1}{N_b}\sum_{i=1}^{N_b}|u(x_b^i) - u_b^i|^2 + \frac{1}{N_f}\sum_{j=1}^{N_f}|\mathcal{N}u(x_f^j)|^2
 \end{aligned}
 $$
 
