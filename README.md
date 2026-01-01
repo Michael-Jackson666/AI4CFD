@@ -14,7 +14,9 @@ Complete implementations of deep learning methods for solving Partial Differenti
 Core Idea: Construct physics-constrained loss using automatic differentiation:
 
 $$
+\begin{aligned}
 \mathcal{L} = \mathcal{L}_{data} + \mathcal{L}_{PDE} = \frac{1}{N_b}\sum_{i=1}^{N_b}\|u(x_b^i) - u_b^i\|^2 + \frac{1}{N_f}\sum_{j=1}^{N_f}\|\mathcal{N}[u](x_f^j)\|^2
+\end{aligned}
 $$
 
 - **Advantages**: Low data requirements, handles complex boundaries, suitable for inverse problems
@@ -49,7 +51,21 @@ $$
 - **Location**: `FNO/`
 - **Applications**: Navier-Stokes, turbulence modeling, Darcy flow
 
-### 4. Tensor Neural Networks (TNN)
+### 4. Physics-Informed Neural Operators (PINO)
+**Neural operators combining FNO architecture with physics constraints**
+
+Core Idea: Learn solution operators with both data fitting and PDE residuals:
+
+$$
+\mathcal{L}_{PINO} = \underbrace{\mathcal{L}_{data}}_{\text{Data Loss}} + \lambda \underbrace{\mathcal{L}_{PDE}}_{\text{Physics Loss}}
+$$
+
+- **Advantages**: Less data than FNO, better generalization than PINNs, fast inference, physics-consistent
+- **Location**: `PINO/`
+- **Tutorials**: Complete overview notebook, 3 example implementations (Burgers, Darcy, Heat)
+- **Applications**: Burgers equation, Darcy flow, heat conduction, parametric PDEs
+
+### 5. Tensor Neural Networks (TNN)
 **Neural networks using tensor decomposition for high-dimensional PDEs**
 
 Core Idea: Decompose high-dimensional functions into products of low-dimensional functions:
@@ -63,7 +79,7 @@ $$
 - **Tutorials**: Complete Jupyter tutorial and 5D examples
 - **Applications**: 5D Poisson equation, high-dimensional PDE solving
 
-### 5. Transformer-based Methods
+### 6. Transformer-based Methods
 **Sequence models using attention mechanisms for PDE solving**
 
 Core Idea: Capture long-range dependencies in spatial/temporal domains via self-attention:
@@ -90,6 +106,10 @@ AI4CFD/
 │   ├── vp_system/      # VP operator learning
 │   └── README.md
 ├── FNO/                # Fourier Neural Operators
+│   └── README.md
+├── PINO/               # Physics-Informed Neural Operators
+│   ├── tutorial/       # Overview notebook
+│   ├── examples/       # Burgers, Darcy, Heat examples
 │   └── README.md
 ├── TNN/                # Tensor Neural Networks
 │   ├── tutorial/       # Complete tutorial
@@ -128,6 +148,12 @@ cd TNN/train/dim5
 python ex_5_1_dim5.py
 ```
 
+**PINO Tutorial (Physics-Informed Operators)**:
+```bash
+cd PINO/tutorial
+jupyter notebook pino_overview.ipynb
+```
+
 **DeepONet Tutorial**:
 ```bash
 cd DeepONet/tutorial
@@ -141,6 +167,7 @@ jupyter notebook operator_learning_torch.ipynb
 | **PINNs** | Low (physics-informed) | Seconds | Re-train needed | Complex boundaries, inverse problems, data scarcity |
 | **DeepONet** | High (needs solutions) | Milliseconds | One forward pass | Multi-query, real-time prediction |
 | **FNO** | High (needs solutions) | Milliseconds | One forward pass | Periodic problems, turbulence, high-resolution |
+| **PINO** | Medium (data + physics) | Milliseconds | One forward pass | Parametric PDEs, less data scenarios, physics-consistent operators |
 | **TNN** | Medium | Seconds | Re-train needed | High-dimensional problems (5D+) |
 | **Transformer** | High (needs solutions) | Milliseconds | One forward pass | Time-series, long-range dependencies |
 
@@ -163,6 +190,8 @@ jupyter notebook operator_learning_torch.ipynb
 Each method has detailed README documentation:
 - `PINNs/README.md`: Complete PINNs guide and tutorial index
 - `DeepONet/README.md`: Operator learning detailed explanation
+- `FNO/README.md`: Fourier Neural Operator implementation
+- `PINO/README.md`: Physics-Informed Neural Operators guide
 - `TNN/README.md`: Tensor neural network theory and implementation
 - `TNN/train/dim5/README.md`: 5D PDE solving example guide
 
