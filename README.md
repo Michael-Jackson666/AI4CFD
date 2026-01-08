@@ -79,7 +79,21 @@ $$
 - **Tutorials**: Complete Jupyter tutorial and 5D examples
 - **Applications**: 5D Poisson equation, high-dimensional PDE solving
 
-### 6. Transformer-based Methods
+### 6. Kolmogorov-Arnold Networks (KAN)
+**Neural networks with learnable activation functions inspired by Kolmogorov-Arnold representation theorem**
+
+Core Idea: Replace fixed activation functions with learnable univariate functions (B-splines):
+
+$$
+f(x_1, \dots, x_n) = \sum_{q=0}^{2n} \Phi_q\left(\sum_{p=1}^{n} \phi_{q,p}(x_p)\right)
+$$
+
+- **Advantages**: Higher accuracy with fewer parameters, interpretable, excellent for smooth PDEs
+- **Location**: `KAN/`
+- **Tutorials**: Complete PDE solving tutorial with B-spline implementation
+- **Applications**: Poisson, Heat, Burgers equations, smooth PDE problems
+
+### 7. Transformer-based Methods
 **Sequence models using attention mechanisms for PDE solving**
 
 Core Idea: Capture long-range dependencies in spatial/temporal domains via self-attention:
@@ -111,6 +125,11 @@ AI4CFD/
 │   ├── tutorial/       # Overview notebook
 │   ├── examples/       # Burgers, Darcy, Heat examples
 │   └── README.md
+├── KAN/                # Kolmogorov-Arnold Networks
+│   ├── tutorial/       # Complete PDE solving tutorial
+│   ├── examples/       # Poisson, Heat, Burgers examples
+│   ├── models.py       # KAN & B-spline implementation
+│   └── utils.py        # Utility functions
 ├── TNN/                # Tensor Neural Networks
 │   ├── tutorial/       # Complete tutorial
 │   ├── train/dim5/     # 5D PDE solving example
@@ -158,6 +177,20 @@ jupyter notebook pino_overview.ipynb
 ```bash
 cd DeepONet/tutorial
 jupyter notebook operator_learning_torch.ipynb
+```
+
+**KAN Tutorial (Kolmogorov-Arnold Networks)**:
+```bash
+cd KAN/tutorial
+jupyter notebook kan_pde_tutorial.ipynb
+```
+
+**KAN Examples**:
+```bash
+cd KAN/examples
+python poisson_1d.py   # 1D Poisson equation
+python heat_1d.py      # 1D heat equation
+python burgers_1d.py   # 1D Burgers equation
 ```
 
 ## 📊 Method Comparison
