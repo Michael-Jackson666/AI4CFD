@@ -9,13 +9,22 @@ Flow Map Learning (FML) 是一种用于时间依赖偏微分方程 (PDEs) 和动
 ### 核心思想
 
 对于动力系统:
-$$\frac{d\mathbf{x}}{dt} = \mathbf{f}(\mathbf{x}, t)$$
+
+$$
+\frac{d\mathbf{x}}{dt} = \mathbf{f}(\mathbf{x}, t)
+$$
 
 **流映射** $\Phi_{\Delta t}$ 定义为将状态从时刻 $t$ 映射到 $t + \Delta t$ 的算子：
-$$\mathbf{x}(t + \Delta t) = \Phi_{\Delta t}(\mathbf{x}(t))$$
+
+$$
+\mathbf{x}(t + \Delta t) = \Phi_{\Delta t}(\mathbf{x}(t))
+$$
 
 FML 使用神经网络 $\mathcal{N}_\theta$ 逼近这个流映射：
-$$\Phi_{\Delta t} \approx \mathcal{N}_\theta$$
+
+$$
+\Phi_{\Delta t} \approx \mathcal{N}_\theta
+$$
 
 ### 与其他方法的区别
 
@@ -48,27 +57,42 @@ FlowMap/
 对于自治 ODE：$\dot{\mathbf{x}} = \mathbf{f}(\mathbf{x})$
 
 流映射满足群性质：
-$$\Phi_{t_1 + t_2} = \Phi_{t_2} \circ \Phi_{t_1}$$
+
+$$
+\Phi_{t_1 + t_2} = \Phi_{t_2} \circ \Phi_{t_1}
+$$
 
 **训练目标**：给定初始状态 $\mathbf{x}_0$ 和时间步长 $\Delta t$，学习
-$$\mathcal{L} = \|\mathcal{N}_\theta(\mathbf{x}_0, \Delta t) - \mathbf{x}_{\Delta t}^{\text{true}}\|^2$$
+
+$$
+\mathcal{L} = \|\mathcal{N}_\theta(\mathbf{x}_0, \Delta t) - \mathbf{x}_{\Delta t}^{\text{true}}\|^2
+$$
 
 ### 2. PDE 的流映射
 
 对于时间依赖 PDE：
-$$\frac{\partial u}{\partial t} = \mathcal{L}[u]$$
+
+$$
+\frac{\partial u}{\partial t} = \mathcal{L}[u]
+$$
 
 其中 $\mathcal{L}$ 是空间微分算子。
 
 **离散化后的流映射**：
-$$\mathbf{u}^{n+1} = \Phi_{\Delta t}(\mathbf{u}^n)$$
+
+$$
+\mathbf{u}^{n+1} = \Phi_{\Delta t}(\mathbf{u}^n)
+$$
 
 使用神经网络（如 CNN、FNO）学习这个时间演化算子。
 
 ### 3. 多步预测
 
 Flow Map 的优势在于自回归预测：
-$$\mathbf{x}_{N\Delta t} = \underbrace{\Phi_{\Delta t} \circ \Phi_{\Delta t} \circ \cdots \circ \Phi_{\Delta t}}_{N \text{ 次}}(\mathbf{x}_0)$$
+
+$$
+\mathbf{x}_{N\Delta t} = \underbrace{\Phi_{\Delta t} \circ \Phi_{\Delta t} \circ \cdots \circ \Phi_{\Delta t}}_{N \text{ 次}}(\mathbf{x}_0)
+$$
 
 ## 🚀 快速开始
 
