@@ -93,7 +93,21 @@ $$
 - **Tutorials**: Complete PDE solving tutorial with B-spline implementation
 - **Applications**: Poisson, Heat, Burgers equations, smooth PDE problems
 
-### 7. Transformer-based Methods
+### 7. Flow Map Learning
+**Neural networks learning time integration operators for dynamical systems and PDEs**
+
+Core Idea: Learn the flow map $\Phi_{\Delta t}$ instead of directly solving the equation:
+
+$$
+\mathbf{x}(t+\Delta t) = \Phi_{\Delta t}(\mathbf{x}(t)) \approx \mathbf{x}(t) + \text{NN}(\mathbf{x}(t), \Delta t)
+$$
+
+- **Advantages**: Efficient long-term prediction, natural residual structure, flexible time stepping
+- **Location**: `FLowMap/`
+- **Tutorials**: Complete Flow Map tutorial with ODE and PDE examples
+- **Applications**: Lorenz chaotic system, heat equation, dynamical systems
+
+### 8. Transformer-based Methods
 **Sequence models using attention mechanisms for PDE solving**
 
 Core Idea: Capture long-range dependencies in spatial/temporal domains via self-attention:
@@ -130,6 +144,11 @@ AI4CFD/
 │   ├── examples/       # Poisson, Heat, Burgers examples
 │   ├── models.py       # KAN & B-spline implementation
 │   └── utils.py        # Utility functions
+├── FLowMap/            # Flow Map Learning
+│   ├── tutorial/       # Flow Map tutorial notebook
+│   ├── examples/       # Lorenz, heat equation examples
+│   ├── models.py       # FlowMapMLP, FlowMapCNN, etc.
+│   └── utils.py        # Data generation & visualization
 ├── TNN/                # Tensor Neural Networks
 │   ├── tutorial/       # Complete tutorial
 │   ├── train/dim5/     # 5D PDE solving example
@@ -193,6 +212,19 @@ python heat_1d.py      # 1D heat equation
 python burgers_1d.py   # 1D Burgers equation
 ```
 
+**Flow Map Tutorial (Flow Map Learning)**:
+```bash
+cd FLowMap/tutorial
+jupyter notebook flowmap_tutorial.ipynb
+```
+
+**Flow Map Examples**:
+```bash
+cd FLowMap/examples
+python lorenz_system.py          # Lorenz chaotic system
+python heat_equation_flowmap.py  # 1D heat equation
+```
+
 ## 📊 Method Comparison
 
 | Method | Training Data | Single Solve Speed | Parameter Query | Best For |
@@ -201,6 +233,7 @@ python burgers_1d.py   # 1D Burgers equation
 | **DeepONet** | High (needs solutions) | Milliseconds | One forward pass | Multi-query, real-time prediction |
 | **FNO** | High (needs solutions) | Milliseconds | One forward pass | Periodic problems, turbulence, high-resolution |
 | **PINO** | Medium (data + physics) | Milliseconds | One forward pass | Parametric PDEs, less data scenarios, physics-consistent operators |
+| **Flow Map** | Medium (trajectory data) | Milliseconds | Autoregressive | Long-term prediction, dynamical systems, time evolution |
 | **TNN** | Medium | Seconds | Re-train needed | High-dimensional problems (5D+) |
 | **Transformer** | High (needs solutions) | Milliseconds | One forward pass | Time-series, long-range dependencies |
 
@@ -225,6 +258,7 @@ Each method has detailed README documentation:
 - `DeepONet/README.md`: Operator learning detailed explanation
 - `FNO/README.md`: Fourier Neural Operator implementation
 - `PINO/README.md`: Physics-Informed Neural Operators guide
+- `FLowMap/README.md`: Flow Map Learning theory and implementation
 - `TNN/README.md`: Tensor neural network theory and implementation
 - `TNN/train/dim5/README.md`: 5D PDE solving example guide
 
